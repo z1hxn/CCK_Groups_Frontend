@@ -87,6 +87,7 @@ export const Header = ({ onLogoutClick }: HeaderProps) => {
                   role="menuitem"
                   onClick={onLogoutClick}
                 >
+                  <img className="btn-left-icon" src="/icon/button/back.svg" alt="" aria-hidden="true" />
                   로그아웃
                 </button>
               </div>

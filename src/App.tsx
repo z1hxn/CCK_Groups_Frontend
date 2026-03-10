@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Header } from '@/widgets/header/Header.tsx';
 import { logout } from '@/features/auth/api';
+import { CompetitionPlayerPage } from '@/pages/competition/CompetitionPlayerPage';
 import { CompetitionPage } from '@/pages/competition/CompetitionPage';
 import { ConfirmPage } from '@/pages/ConfirmPage';
 import { LogoutPage } from '@/pages/LogoutPage';
@@ -20,6 +21,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/competition/:compIdx" element={<CompetitionPage />} />
+          <Route path="/competition/:compIdx/player/:cckId" element={<CompetitionPlayerPage />} />
           <Route path="/confirm" element={<ConfirmPage />} />
           <Route path="/logout" element={<LogoutPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

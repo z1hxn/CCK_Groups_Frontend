@@ -6,6 +6,13 @@ type TokenResponse = {
   access_token: string;
 };
 
+type AuthInfoResponse = {
+  name: string;
+  enName: string;
+  state: string;
+  cckId: string;
+};
+
 export const startLogin = () => {
   window.location.href = LOGIN_URL;
 };
@@ -23,4 +30,14 @@ export const logout = async () => {
   } finally {
     removeAccessToken();
   }
+};
+
+export const getAuthInfoByCckId = async (cckId: string): Promise<AuthInfoResponse> => {
+  const response = await fetch(`https://auth.cubingclub.com/api/auth/info/${encodeURIComponent(cckId.toLowerCase())}`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch auth info (${response.status})`);
+  }
+  return (await response.json()) as AuthInfoResponse;
 };

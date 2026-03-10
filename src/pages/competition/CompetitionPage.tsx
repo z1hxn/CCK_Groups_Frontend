@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { getCompetitionConfirmedRegistrations, getCompetitionDetail } from '@/entities/competition/api';
 import type { CompetitionDetail, ConfirmedRegistration } from '@/entities/competition/types';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader.tsx';
@@ -10,8 +10,6 @@ const formatDate = (date: Date) => {
   const d = `${date.getDate()}`.padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
-
-const formatCurrency = (value: number) => `${value.toLocaleString('ko-KR')}원`;
 
 export const CompetitionPage = () => {
   const { compIdx } = useParams();
@@ -108,12 +106,14 @@ export const CompetitionPage = () => {
         }
         actions={[
           {
-            label: 'Ranking으로 이동',
+            label: 'Ranking 대회 페이지',
             href: `https://ranking.cubingclub.com/competition/${competitionId}`,
+            iconSrc: '/icon/button/statistics.svg',
           },
           {
-            label: 'Payment으로 이동',
+            label: 'Payment 대회 페이지',
             href: `https://payment.cubingclub.com/competition/${competitionId}`,
+            iconSrc: '/icon/button/payment.svg',
           },
         ]}
       />
@@ -153,19 +153,17 @@ export const CompetitionPage = () => {
                 <div className="card-list-empty">조건에 맞는 참가자가 없습니다.</div>
               ) : (
                 filteredRegistrations.map((item) => (
-                  <div className="registration-row" key={item.id}>
-                    <div className="registration-row-main">
-                      <div className="registration-name-row">
-                        <strong>{item.name}</strong>
-                        <span>{item.enName}</span>
-                      </div>
-                      <p>{item.cckId}</p>
+                  <Link
+                    className="registration-row registration-row-link"
+                    key={item.id}
+                    to={`/competition/${competitionId}/player/${encodeURIComponent(item.cckId)}`}
+                    state={{ playerName: item.name }}
+                  >
+                    <div className="registration-line">
+                      <strong>{item.name}</strong>
+                      <span>{item.cckId}</span>
                     </div>
-                    <div className="registration-row-side">
-                      <p>{item.selectedEvents.join(', ') || '선택 종목 없음'}</p>
-                      <span>{formatCurrency(item.totalFee)}</span>
-                    </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>

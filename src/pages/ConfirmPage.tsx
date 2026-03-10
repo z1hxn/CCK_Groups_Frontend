@@ -31,7 +31,8 @@ export const ConfirmPage = () => {
     return (
       <div className="empty-state">
         인증 처리에 실패했습니다.{' '}
-        <button type="button" onClick={startLogin}>
+        <button type="button" className="retry-login-btn" onClick={startLogin}>
+          <img className="btn-left-icon" src="/icon/button/home.svg" alt="" aria-hidden="true" />
           다시 로그인
         </button>
       </div>

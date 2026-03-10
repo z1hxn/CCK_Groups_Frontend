@@ -1,5 +1,12 @@
 import { apiRequest } from '@/shared/api/client';
-import type { Competition, CompetitionDetail, CompetitionStatus, ConfirmedRegistration, RoundDayCount } from './types';
+import type {
+  Competition,
+  CompetitionDetail,
+  CompetitionPlayerAssignments,
+  CompetitionStatus,
+  ConfirmedRegistration,
+  RoundDayCount,
+} from './types';
 
 type ListResponse = { status: CompetitionStatus; data: Competition[] };
 type DetailResponse = { data: CompetitionDetail };
@@ -103,6 +110,30 @@ export const getCompetitionConfirmedRegistrations = async (
             },
           ]
         : [],
+      mocked: true,
+    };
+  }
+};
+
+export const getCompetitionPlayerAssignments = async (
+  competitionId: number,
+  cckId: string,
+): Promise<{ data: CompetitionPlayerAssignments; mocked: boolean }> => {
+  try {
+    const response = await apiRequest<CompetitionPlayerAssignments>(
+      `/v1/competition/${competitionId}/player/${encodeURIComponent(cckId)}`,
+    );
+    return { data: response, mocked: false };
+  } catch {
+    return {
+      data: {
+        compIdx: competitionId,
+        cckId,
+        competition: [],
+        judge: [],
+        runner: [],
+        scrambler: [],
+      },
       mocked: true,
     };
   }

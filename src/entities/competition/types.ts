@@ -42,3 +42,32 @@ export type RoundDayCount = {
   now: Round[];
   future: Round[];
 };
+
+export type PlayerRole = 'competition' | 'judge' | 'runner' | 'scrambler';
+
+export type PlayerRoundInfo = {
+  idx: number;
+  compIdx: number;
+  compName: string;
+  cubeEventName: string;
+  roundName: string;
+  eventStart: string;
+  eventEnd: string;
+};
+
+export type PlayerGroupAssignment = {
+  idx: number;
+  roundIdx: number;
+  cckId: string;
+  group: string;
+  round: PlayerRoundInfo | null;
+};
+
+export type CompetitionPlayerAssignments = {
+  compIdx: number;
+  cckId: string;
+  competition: PlayerGroupAssignment[];
+  judge: PlayerGroupAssignment[];
+  runner: PlayerGroupAssignment[];
+  scrambler: PlayerGroupAssignment[];
+};
