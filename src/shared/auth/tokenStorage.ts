@@ -7,6 +7,7 @@ export type AuthUserProfile = {
   name: string;
   cckId: string;
   role?: string;
+  position?: string;
 };
 
 const dispatchAuthChange = () => {
@@ -72,6 +73,41 @@ export const getAuthUserProfile = (): AuthUserProfile | null => {
   const name = pickString(payload, ['name', 'nickname', 'preferred_username', 'username']) ?? '사용자';
   const cckId = pickString(payload, ['cckId', 'memberId', 'id', 'sub']) ?? '';
   const role = pickString(payload, ['role', 'userRole', 'memberRole']);
+  const position = pickString(payload, ['position']);
 
-  return { name, cckId, role };
+  return { name, cckId, role, position };
+};
+
+const getStringArray = (payload: JwtPayload, keys: string[]): string[] => {
+  for (const key of keys) {
+    const value = payload[key];
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+    if (typeof value === 'string' && value.trim()) {
+      return value
+        .split(/[,\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+};
+
+export const isAdminByToken = (): boolean => {
+  const payload = getPayload();
+  if (!payload) return false;
+
+  const candidates = [
+    pickString(payload, ['position']),
+    pickString(payload, ['role', 'userRole', 'memberRole']),
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).toUpperCase());
+
+  const authorities = getStringArray(payload, ['authorities', 'roles', 'permissions']).map((item) =>
+    item.toUpperCase(),
+  );
+
+  return [...candidates, ...authorities].some((item) => item.includes('ADMIN'));
 };

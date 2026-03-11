@@ -13,7 +13,6 @@ const formatPeriod = (start: string, end: string) => (start === end ? start : `$
 export const MainPage = () => {
   const [status, setStatus] = useState<CompetitionStatus>('now');
   const [loading, setLoading] = useState(true);
-  const [mocked, setMocked] = useState(false);
   const [items, setItems] = useState<Competition[]>([]);
 
   useEffect(() => {
@@ -24,8 +23,7 @@ export const MainPage = () => {
       try {
         const result = await getCompetitions(status);
         if (cancelled) return;
-        setItems(result.data);
-        setMocked(result.mocked);
+        setItems(result);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -44,7 +42,6 @@ export const MainPage = () => {
       <div className="main-page-head">
         <h1>CCK Groups 대회 목록</h1>
         <p>Ranking 스타일 기준으로 대회 목록과 상세 정보를 조회합니다.</p>
-        {mocked ? <small className="mock-chip">실 API 실패로 샘플 데이터 표시 중</small> : null}
       </div>
 
       <div className="status-tabs">

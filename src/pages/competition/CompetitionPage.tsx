@@ -11,16 +11,24 @@ const formatDate = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
+const formatTime = (date: Date) => {
+  const h = `${date.getHours()}`.padStart(2, '0');
+  const m = `${date.getMinutes()}`.padStart(2, '0');
+  return `${h}:${m}`;
+};
+
+const formatTimeRange = (start: string, end: string) => `${formatTime(new Date(start))} ~ ${formatTime(new Date(end))}`;
+
 export const CompetitionPage = () => {
   const { compIdx } = useParams();
   const competitionId = Number(compIdx);
+  const [viewMode, setViewMode] = useState<'player' | 'round'>('player');
 
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [registrations, setRegistrations] = useState<ConfirmedRegistration[]>([]);
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [query, setQuery] = useState('');
-  const [mocked, setMocked] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -34,8 +42,7 @@ export const CompetitionPage = () => {
       try {
         const result = await getCompetitionDetail(competitionId);
         if (!mounted) return;
-        setCompetition(result.data);
-        setMocked(result.mocked);
+        setCompetition(result);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -57,8 +64,7 @@ export const CompetitionPage = () => {
       try {
         const result = await getCompetitionConfirmedRegistrations(competitionId);
         if (!mounted) return;
-        setRegistrations(result.data);
-        setMocked((prev) => prev || result.mocked);
+        setRegistrations(result);
       } finally {
         if (mounted) setRegistrationLoading(false);
       }
@@ -83,6 +89,14 @@ export const CompetitionPage = () => {
         );
       }),
     [registrations, normalizedQuery],
+  );
+
+  const rounds = useMemo(
+    () =>
+      competition?.rounds
+        ? [...competition.rounds].sort((a, b) => new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime())
+        : [],
+    [competition?.rounds],
   );
 
   if (loading) return <div className="empty-state">대회 정보 로딩 중...</div>;
@@ -117,57 +131,103 @@ export const CompetitionPage = () => {
           },
         ]}
       />
-      {mocked ? <small className="mock-chip">API 오류로 샘플 데이터 표시 중</small> : null}
 
       <div className="comp-content">
+        <div className="comp-view-tabs">
+          <button
+            type="button"
+            className={`comp-view-tab ${viewMode === 'player' ? 'active' : ''}`}
+            onClick={() => setViewMode('player')}
+          >
+            선수별 보기
+          </button>
+          <button
+            type="button"
+            className={`comp-view-tab ${viewMode === 'round' ? 'active' : ''}`}
+            onClick={() => setViewMode('round')}
+          >
+            라운드별 보기
+          </button>
+        </div>
+
         <div className="registration-panel">
-          <label className="search-bar" htmlFor="competition-registration-search">
-            <span className="round-search-icon" aria-hidden="true">
-              <img src="/icon/sidebar/search.svg" alt="" aria-hidden="true" />
-            </span>
-            <input
-              className="search-bar-input"
-              id="competition-registration-search"
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="이름, 영문 이름, CCK ID로 검색"
-            />
-          </label>
+          {viewMode === 'player' ? (
+            <>
+              <label className="search-bar" htmlFor="competition-registration-search">
+                <span className="round-search-icon" aria-hidden="true">
+                  <img src="/icon/sidebar/search.svg" alt="" aria-hidden="true" />
+                </span>
+                <input
+                  className="search-bar-input"
+                  id="competition-registration-search"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="이름, 영문 이름, CCK ID로 검색"
+                />
+              </label>
 
-          <div className="registration-summary">
-            총 <span>{registrations.length.toLocaleString('ko-KR')}</span>명
-            {normalizedQuery ? (
-              <>
-                {' '}
-                · 검색 결과 <span>{filteredRegistrations.length.toLocaleString('ko-KR')}</span>명
-              </>
-            ) : null}
-          </div>
+              <div className="registration-summary">
+                총 <span>{registrations.length.toLocaleString('ko-KR')}</span>명
+                {normalizedQuery ? (
+                  <>
+                    {' '}
+                    · 검색 결과 <span>{filteredRegistrations.length.toLocaleString('ko-KR')}</span>명
+                  </>
+                ) : null}
+              </div>
 
-          {registrationLoading ? <div className="empty-state">참가자 목록 로딩 중...</div> : null}
+              {registrationLoading ? <div className="empty-state">참가자 목록 로딩 중...</div> : null}
 
-          {!registrationLoading ? (
-            <div className="registration-list">
-              {filteredRegistrations.length === 0 ? (
-                <div className="card-list-empty">조건에 맞는 참가자가 없습니다.</div>
-              ) : (
-                filteredRegistrations.map((item) => (
-                  <Link
-                    className="registration-row registration-row-link"
-                    key={item.id}
-                    to={`/competition/${competitionId}/player/${encodeURIComponent(item.cckId)}`}
-                    state={{ playerName: item.name }}
-                  >
-                    <div className="registration-line">
-                      <strong>{item.name}</strong>
-                      <span>{item.cckId}</span>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          ) : null}
+              {!registrationLoading ? (
+                <div className="registration-list">
+                  {filteredRegistrations.length === 0 ? (
+                    <div className="card-list-empty">조건에 맞는 참가자가 없습니다.</div>
+                  ) : (
+                    filteredRegistrations.map((item) => (
+                      <Link
+                        className="registration-row registration-row-link"
+                        key={item.id}
+                        to={`/competition/${competitionId}/player/${encodeURIComponent(item.cckId)}`}
+                      >
+                        <div className="registration-line">
+                          <strong>{item.name}</strong>
+                          <span>{item.cckId}</span>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className="registration-summary">
+                총 <span>{rounds.length.toLocaleString('ko-KR')}</span>개 라운드
+              </div>
+
+              <div className="registration-list">
+                {rounds.length === 0 ? (
+                  <div className="card-list-empty">라운드가 없습니다.</div>
+                ) : (
+                  rounds.map((round) => (
+                    <Link
+                      className="registration-row registration-row-link round-list-link"
+                      key={round.id}
+                      to={`/competition/${competitionId}/round/${round.id}`}
+                    >
+                      <div className="round-list-line">
+                        <strong>
+                          {round.eventName} {round.roundName}
+                        </strong>
+                        <span>{formatTimeRange(round.eventStart, round.eventEnd)}</span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

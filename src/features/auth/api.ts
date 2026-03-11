@@ -11,6 +11,9 @@ type AuthInfoResponse = {
   enName: string;
   state: string;
   cckId: string;
+  wcaId?: string;
+  gender?: string;
+  position?: string;
 };
 
 export const startLogin = () => {
@@ -33,11 +36,34 @@ export const logout = async () => {
 };
 
 export const getAuthInfoByCckId = async (cckId: string): Promise<AuthInfoResponse> => {
-  const response = await fetch(`https://auth.cubingclub.com/api/auth/info/${encodeURIComponent(cckId.toLowerCase())}`, {
-    headers: { Accept: 'application/json' },
+  const normalizedCckId = cckId.trim().toLowerCase();
+  const response = await fetch(`https://auth.cubingclub.com/api/auth/info/${encodeURIComponent(normalizedCckId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
   });
+
   if (!response.ok) {
-    throw new Error(`Failed to fetch auth info (${response.status})`);
+    throw new Error(`Auth info request failed (${response.status})`);
   }
-  return (await response.json()) as AuthInfoResponse;
+
+  const data = (await response.json()) as Partial<AuthInfoResponse> | null;
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid auth info payload');
+  }
+
+  return {
+    name: String(data.name ?? ''),
+    enName: String(data.enName ?? ''),
+    state: String(data.state ?? ''),
+    cckId: String(data.cckId ?? normalizedCckId),
+    wcaId: data.wcaId ? String(data.wcaId) : '',
+    gender: data.gender ? String(data.gender) : '',
+    position: data.position ? String(data.position) : '',
+  };
+};
+
+export const getMyAuthInfo = async (): Promise<AuthInfoResponse> => {
+  return apiRequest<AuthInfoResponse>('/auth/info');
 };

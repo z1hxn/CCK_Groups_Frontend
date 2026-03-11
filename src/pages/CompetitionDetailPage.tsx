@@ -10,7 +10,6 @@ const formatPeriod = (start: string, end: string) => (start === end ? start : `$
 
 export const CompetitionDetailPage = ({ competitionId }: CompetitionDetailPageProps) => {
   const [loading, setLoading] = useState(true);
-  const [mocked, setMocked] = useState(false);
   const [competition, setCompetition] = useState<Competition | null>(null);
 
   useEffect(() => {
@@ -21,8 +20,7 @@ export const CompetitionDetailPage = ({ competitionId }: CompetitionDetailPagePr
       try {
         const result = await getCompetitionDetail(competitionId);
         if (cancelled) return;
-        setCompetition(result.data);
-        setMocked(result.mocked);
+        setCompetition(result);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -41,7 +39,6 @@ export const CompetitionDetailPage = ({ competitionId }: CompetitionDetailPagePr
     <section className="detail-page">
       <div className="detail-head">
         <h1>{competition.name}</h1>
-        {mocked ? <small className="mock-chip">실 API 실패로 샘플 데이터 표시 중</small> : null}
       </div>
 
       <div className="detail-panel">

@@ -7,7 +7,6 @@ export const MainPage = () => {
   const [ongoing, setOngoing] = useState<CompListItem[]>([]);
   const [ended, setEnded] = useState<CompListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mocked, setMocked] = useState(false);
 
   const formatDate = (date: Date) => {
     const year = date.getFullYear();
@@ -50,10 +49,8 @@ export const MainPage = () => {
 
         if (!mounted) return;
 
-        setMocked(future.mocked || now.mocked || past.mocked);
-
         setUpcoming(
-          future.data.map((item) => ({
+          future.map((item) => ({
             title: item.name,
             meta: formatMeta(new Date(item.dateStart), new Date(item.dateEnd), item.location),
             badge: getDDay(new Date(item.dateStart)),
@@ -62,7 +59,7 @@ export const MainPage = () => {
         );
 
         setOngoing(
-          now.data.map((item) => ({
+          now.map((item) => ({
             title: item.name,
             meta: formatMeta(new Date(item.dateStart), new Date(item.dateEnd), item.location),
             badge: '진행 중',
@@ -72,7 +69,7 @@ export const MainPage = () => {
         );
 
         setEnded(
-          past.data.map((item) => ({
+          past.map((item) => ({
             title: item.name,
             meta: formatMeta(new Date(item.dateStart), new Date(item.dateEnd), item.location),
             badge: '종료',
@@ -95,7 +92,6 @@ export const MainPage = () => {
 
   return (
     <div className="main-page">
-      {mocked ? <small className="mock-chip">API 오류로 샘플 데이터 표시 중</small> : null}
       <div className="main-section">
         <h2 className="main-section-title">다가오는 대회</h2>
         <CompList items={upcoming} emptyText="다가오는 대회가 없습니다." />

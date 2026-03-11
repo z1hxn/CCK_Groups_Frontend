@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   getCompetitionDetail,
   getCompetitionPlayerAssignments,
@@ -36,10 +36,6 @@ type TimelineRenderGroup = {
     badge: RoleBadge;
     group: string;
   }>;
-};
-
-type LocationState = {
-  playerName?: string;
 };
 
 const roleMeta: Record<PlayerRole, { label: string; className: string }> = {
@@ -82,18 +78,15 @@ const dedupeRounds = (rounds: Round[]) => {
 };
 
 export const CompetitionPlayerPage = () => {
-  const location = useLocation();
   const { compIdx, cckId } = useParams();
   const competitionId = Number(compIdx);
   const playerId = String(cckId || '').trim();
-  const locationState = (location.state as LocationState | null) ?? null;
 
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [timelineRounds, setTimelineRounds] = useState<Round[]>([]);
   const [assignments, setAssignments] = useState<CompetitionPlayerAssignments | null>(null);
   const [displayPlayerName, setDisplayPlayerName] = useState('');
   const [loading, setLoading] = useState(true);
-  const [mocked, setMocked] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -111,10 +104,9 @@ export const CompetitionPlayerPage = () => {
         ]);
         if (!mounted) return;
 
-        setCompetition(competitionResult.data);
-        setAssignments(assignmentResult.data);
-        setMocked(competitionResult.mocked || assignmentResult.mocked);
-        setDisplayPlayerName(locationState?.playerName || playerId);
+        setCompetition(competitionResult);
+        setAssignments(assignmentResult);
+        setDisplayPlayerName(playerId);
 
         try {
           const authInfo = await getAuthInfoByCckId(playerId);
@@ -128,22 +120,21 @@ export const CompetitionPlayerPage = () => {
           // Keep fallback name when auth service is unavailable.
         }
 
-        if (!competitionResult.data) return;
+        if (!competitionResult) return;
 
-        const days = getCompetitionDays(competitionResult.data);
+        const days = getCompetitionDays(competitionResult);
         const schedules = await Promise.all(days.map((day) => getCompetitionRoundsByDay(competitionId, day)));
         if (!mounted) return;
 
         setTimelineRounds(
           dedupeRounds(
             schedules.flatMap((schedule) => [
-              ...schedule.data.past,
-              ...schedule.data.now,
-              ...schedule.data.future,
+              ...schedule.past,
+              ...schedule.now,
+              ...schedule.future,
             ]),
           ),
         );
-        setMocked((prev) => prev || schedules.some((schedule) => schedule.mocked));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -225,7 +216,7 @@ export const CompetitionPlayerPage = () => {
   if (!Number.isFinite(competitionId) || !playerId) return <div className="empty-state">잘못된 접근입니다.</div>;
   if (!competition) return <div className="empty-state">대회 정보를 불러올 수 없습니다.</div>;
 
-  const playerName = displayPlayerName || locationState?.playerName || playerId;
+  const playerName = displayPlayerName || playerId;
 
   return (
     <div className="comp-page">
@@ -252,7 +243,6 @@ export const CompetitionPlayerPage = () => {
           },
         ]}
       />
-      {mocked ? <small className="mock-chip">API 오류로 일부 데이터가 샘플로 표시될 수 있습니다</small> : null}
 
       {rows.length === 0 ? (
         <div className="empty-state">해당 선수의 배정 정보가 없습니다.</div>

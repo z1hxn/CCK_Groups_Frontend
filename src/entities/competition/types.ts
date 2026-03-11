@@ -53,6 +53,7 @@ export type PlayerRoundInfo = {
   roundName: string;
   eventStart: string;
   eventEnd: string;
+  roundGroupList: string[];
 };
 
 export type PlayerGroupAssignment = {
@@ -70,4 +71,22 @@ export type CompetitionPlayerAssignments = {
   judge: PlayerGroupAssignment[];
   runner: PlayerGroupAssignment[];
   scrambler: PlayerGroupAssignment[];
+};
+
+export type RoundGroupAssignments = {
+  group: string;
+  competition: PlayerGroupAssignment[];
+  judge: PlayerGroupAssignment[];
+  runner: PlayerGroupAssignment[];
+  scrambler: PlayerGroupAssignment[];
+};
+
+export type CompetitionRoundAssignments = {
+  roundIdx: number;
+  round: PlayerRoundInfo | null;
+  competition: PlayerGroupAssignment[];
+  judge: PlayerGroupAssignment[];
+  runner: PlayerGroupAssignment[];
+  scrambler: PlayerGroupAssignment[];
+  groups: RoundGroupAssignments[];
 };

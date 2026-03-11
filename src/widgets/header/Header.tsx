@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { authChangeEvent, getAccessToken, getAuthUserProfile } from '@/shared/auth/tokenStorage.ts';
-import { startLogin } from '@/features/auth/api.ts';
+import { authChangeEvent, getAccessToken, getAuthUserProfile, isAdminByToken } from '@/shared/auth/tokenStorage.ts';
+import { getAuthInfoByCckId, startLogin } from '@/features/auth/api.ts';
 
 type HeaderProps = {
   onLogoutClick: () => void;
@@ -9,10 +9,15 @@ type HeaderProps = {
 
 export const Header = ({ onLogoutClick }: HeaderProps) => {
   const [token, setToken] = useState(getAccessToken());
+  const [authName, setAuthName] = useState<string | null>(null);
+  const [authCckId, setAuthCckId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const profile = token ? getAuthUserProfile() : null;
+  const isAdmin = token ? isAdminByToken() : false;
   const isLoggedIn = Boolean(token);
+  const displayName = authName || profile?.name || '사용자';
+  const displayCckId = authCckId || profile?.cckId || '-';
 
   useEffect(() => {
     const sync = () => setToken(getAccessToken());
@@ -32,6 +37,40 @@ export const Header = ({ onLogoutClick }: HeaderProps) => {
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setAuthName(null);
+      setAuthCckId(null);
+      return;
+    }
+
+    if (!profile?.cckId) {
+      setAuthName(null);
+      setAuthCckId(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadAuthInfo = async () => {
+      try {
+        const info = await getAuthInfoByCckId(profile.cckId);
+        if (cancelled) return;
+        const normalizedName = info.name && info.enName ? `${info.name} (${info.enName})` : info.name;
+        setAuthName(normalizedName || null);
+        setAuthCckId(info.cckId || null);
+      } catch {
+        if (cancelled) return;
+        setAuthName(null);
+        setAuthCckId(null);
+      }
+    };
+
+    loadAuthInfo();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, profile?.cckId]);
 
   return (
     <header className="header">
@@ -73,21 +112,25 @@ export const Header = ({ onLogoutClick }: HeaderProps) => {
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((prev) => !prev)}
             >
-              <span className="avatar-text">{(profile?.name ?? 'U').slice(0, 1)}</span>
+              <span className="avatar-text">{displayName.slice(0, 1)}</span>
             </button>
             {menuOpen ? (
               <div className="header-user-menu" role="menu">
                 <div className="header-user-info">
-                  <div className="header-user-info-name">{profile?.name ?? '사용자'}</div>
-                  <div className="header-user-info-id">{profile?.cckId || '-'}</div>
+                  <div className="header-user-info-name">{displayName}</div>
+                  <div className="header-user-info-id">{displayCckId}</div>
                 </div>
+                {isAdmin ? (
+                  <Link type="button" className="header-user-menu-item header-user-menu-item--admin" role="menuitem" to="/admin">
+                    관리자 페이지
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   className="header-user-menu-item header-user-menu-item--danger"
                   role="menuitem"
                   onClick={onLogoutClick}
                 >
-                  <img className="btn-left-icon" src="/icon/button/back.svg" alt="" aria-hidden="true" />
                   로그아웃
                 </button>
               </div>
