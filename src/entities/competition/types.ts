@@ -90,3 +90,19 @@ export type CompetitionRoundAssignments = {
   scrambler: PlayerGroupAssignment[];
   groups: RoundGroupAssignments[];
 };
+
+export type RoundGroupConfig = {
+  compIdx: number;
+  roundIdx: number;
+  groups: Array<{
+    idx?: number;
+    roundIdx?: number;
+    groupName: string;
+    playerCount: number;
+    judgeCount: number;
+    runnerCount: number;
+    scramblerCount: number;
+  }>;
+  groupList?: string[];
+  source?: 'db' | 'ranking';
+};

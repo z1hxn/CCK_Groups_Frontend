@@ -112,7 +112,7 @@ export const CompetitionRoundPage = () => {
         actions={[
           {
             label: '라운드 목록',
-            to: `/competition/${competitionId}`,
+            to: `/competition/${competitionId}?view=round`,
             iconSrc: '/icon/button/back.svg',
           },
         ]}
@@ -126,7 +126,7 @@ export const CompetitionRoundPage = () => {
             {groups.map((groupItem) => (
               <section className="round-group-card" key={`${targetRoundIdx}-${groupItem.group}`}>
                 <header className="round-group-header">
-                  <h3>조 {groupItem.group}</h3>
+                  <h3>{groupItem.group}조</h3>
                 </header>
 
                 <div className="round-role-grid">

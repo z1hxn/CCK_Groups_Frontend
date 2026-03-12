@@ -1,9 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useEffect } from 'react';
+import { AdminCompetitionAutoPage } from '@/pages/admin/AdminCompetitionAutoPage';
+import { AdminCompetitionGroupsPage } from '@/pages/admin/AdminCompetitionGroupsPage';
 import { Header } from '@/widgets/header/Header.tsx';
 import { logout, startLogin } from '@/features/auth/api';
 import { AdminCompetitionPage } from '@/pages/admin/AdminCompetitionPage';
 import { AdminCompetitionPlayerPage } from '@/pages/admin/AdminCompetitionPlayerPage';
+import { AdminCompetitionRoundPage } from '@/pages/admin/AdminCompetitionRoundPage';
 import { AdminPage } from '@/pages/admin/AdminPage';
 import { CompetitionPlayerPage } from '@/pages/competition/CompetitionPlayerPage';
 import { CompetitionPage } from '@/pages/competition/CompetitionPage';
@@ -34,7 +37,12 @@ function AppShell() {
           <Route path="/" element={<MainPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/competition/:compIdx" element={<AdminCompetitionPage />} />
+          <Route path="/admin/competition/:compIdx/groups" element={<AdminCompetitionGroupsPage />} />
           <Route path="/admin/competition/:compIdx/player/:cckId" element={<AdminCompetitionPlayerPage />} />
+          <Route path="/admin/competition/:compIdx/round/:roundIdx" element={<AdminCompetitionRoundPage />} />
+          <Route path="/admin/competition/:compIdx/groups/player/:cckId" element={<AdminCompetitionPlayerPage />} />
+          <Route path="/admin/competition/:compIdx/groups/round/:roundIdx" element={<AdminCompetitionRoundPage />} />
+          <Route path="/admin/competition/:compIdx/auto" element={<AdminCompetitionAutoPage />} />
           <Route path="/competition/:compIdx" element={<CompetitionPage />} />
           <Route path="/competition/:compIdx/player/:cckId" element={<CompetitionPlayerPage />} />
           <Route path="/competition/:compIdx/round/:roundIdx" element={<CompetitionRoundPage />} />

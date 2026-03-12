@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getCompetitions } from '@/entities/competition/api';
 import type { Competition } from '@/entities/competition/types';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
+import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 export const AdminPage = () => {
+  const navigate = useNavigate();
   const [items, setItems] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,18 +48,61 @@ export const AdminPage = () => {
   if (loading) return <div className="empty-state">관리자 페이지 로딩 중...</div>;
 
   return (
-    <div className="main-page">
-      <div className="main-section">
-        <h2 className="main-section-title">관리자 페이지</h2>
-        <div className="admin-competition-list">
-          {uniqueCompetitions.map((competition) => (
-            <Link key={competition.id} className="admin-competition-row" to={`/admin/competition/${competition.id}`}>
-              <strong>{competition.name}</strong>
-              <span>{competition.location || '장소 미정'}</span>
-            </Link>
-          ))}
-          {uniqueCompetitions.length === 0 ? <div className="card-list-empty">대회가 없습니다.</div> : null}
-        </div>
+    <div className="comp-page">
+      <PageHeader
+        containerClassName="comp-header"
+        title="관리자 페이지"
+        subtitle={
+          <>
+            <span>대회 선택</span>
+          </>
+        }
+      />
+      <div className="comp-content admin-content">
+        <section className="admin-panel">
+          <h3>대회 목록</h3>
+          <div className="admin-player-table-wrap">
+            <table className="admin-player-table">
+              <thead>
+                <tr>
+                  <th>대회명</th>
+                  <th>장소</th>
+                  <th>기간</th>
+                </tr>
+              </thead>
+              <tbody>
+                {uniqueCompetitions.map((competition) => (
+                  <tr
+                    key={competition.id}
+                    className="admin-player-table-row"
+                    onClick={() => navigate(`/admin/competition/${competition.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        navigate(`/admin/competition/${competition.id}`);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                  >
+                    <td>{competition.name}</td>
+                    <td>{competition.location || '장소 미정'}</td>
+                    <td>
+                      {competition.dateStart} ~ {competition.dateEnd}
+                    </td>
+                  </tr>
+                ))}
+                {uniqueCompetitions.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="admin-player-table-empty">
+                      대회가 없습니다.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   );

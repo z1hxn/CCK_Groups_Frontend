@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getCompetitionConfirmedRegistrations, getCompetitionDetail } from '@/entities/competition/api';
 import type { CompetitionDetail, ConfirmedRegistration } from '@/entities/competition/types';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader.tsx';
@@ -22,7 +22,9 @@ const formatTimeRange = (start: string, end: string) => `${formatTime(new Date(s
 export const CompetitionPage = () => {
   const { compIdx } = useParams();
   const competitionId = Number(compIdx);
-  const [viewMode, setViewMode] = useState<'player' | 'round'>('player');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialView = searchParams.get('view') === 'round' ? 'round' : 'player';
+  const [viewMode, setViewMode] = useState<'player' | 'round'>(initialView);
 
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,6 +101,17 @@ export const CompetitionPage = () => {
     [competition?.rounds],
   );
 
+  useEffect(() => {
+    const queryView = searchParams.get('view');
+    if (queryView === 'round' && viewMode !== 'round') setViewMode('round');
+    if (queryView !== 'round' && viewMode !== 'player') setViewMode('player');
+  }, [searchParams, viewMode]);
+
+  const updateViewMode = (next: 'player' | 'round') => {
+    setViewMode(next);
+    setSearchParams(next === 'round' ? { view: 'round' } : {});
+  };
+
   if (loading) return <div className="empty-state">대회 정보 로딩 중...</div>;
   if (!competition) return <div className="empty-state">대회 정보를 불러올 수 없습니다.</div>;
 
@@ -137,14 +150,14 @@ export const CompetitionPage = () => {
           <button
             type="button"
             className={`comp-view-tab ${viewMode === 'player' ? 'active' : ''}`}
-            onClick={() => setViewMode('player')}
+            onClick={() => updateViewMode('player')}
           >
             선수별 보기
           </button>
           <button
             type="button"
             className={`comp-view-tab ${viewMode === 'round' ? 'active' : ''}`}
-            onClick={() => setViewMode('round')}
+            onClick={() => updateViewMode('round')}
           >
             라운드별 보기
           </button>

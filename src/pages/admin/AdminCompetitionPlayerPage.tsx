@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  getAdminRoundGroupConfig,
+  getCompetitionConfirmedRegistrations,
   getCompetitionDetail,
   getCompetitionPlayerAssignments,
   getCompetitionRoundAssignments,
@@ -11,10 +13,12 @@ import type {
   CompetitionPlayerAssignments,
   CompetitionRoundAssignments,
   PlayerRole,
+  RoundGroupConfig,
   Round,
 } from '@/entities/competition/types';
 import { getAuthInfoByCckId } from '@/features/auth/api';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
+import { OverlayConfirm, OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 type RoleMeta = { role: PlayerRole; label: string; singleSelect: boolean };
@@ -29,6 +33,13 @@ const roleItems: RoleMeta[] = [
 const makeFieldKey = (roundIdx: number, role: PlayerRole) => `${roundIdx}-${role}`;
 
 const toUniqueSortedGroups = (groups: string[]) => [...new Set(groups)].sort((a, b) => a.localeCompare(b, 'ko-KR'));
+const normalizeEventName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '');
+const roleLimitFieldByRole: Record<PlayerRole, keyof RoundGroupConfig['groups'][number]> = {
+  competition: 'playerCount',
+  judge: 'judgeCount',
+  runner: 'runnerCount',
+  scrambler: 'scramblerCount',
+};
 
 export const AdminCompetitionPlayerPage = () => {
   const { compIdx, cckId } = useParams();
@@ -38,33 +49,53 @@ export const AdminCompetitionPlayerPage = () => {
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [assignments, setAssignments] = useState<CompetitionPlayerAssignments | null>(null);
   const [roundAssignmentMap, setRoundAssignmentMap] = useState<Record<number, CompetitionRoundAssignments>>({});
+  const [roundConfigMap, setRoundConfigMap] = useState<Record<number, RoundGroupConfig>>({});
   const [selectedGroupsByKey, setSelectedGroupsByKey] = useState<Record<string, string[]>>({});
-  const [expandedRounds, setExpandedRounds] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState('');
   const [playerName, setPlayerName] = useState('');
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' | 'info' }>({
+    open: false,
+    message: '',
+    variant: 'info',
+  });
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    onConfirm?: () => void;
+  }>({ open: false });
 
   const loadData = async () => {
     if (!Number.isFinite(competitionId) || !playerCckId) return;
 
-    const [competitionResult, assignmentResult] = await Promise.all([
+    const [competitionResult, assignmentResult, registrationResult] = await Promise.all([
       getCompetitionDetail(competitionId),
       getCompetitionPlayerAssignments(competitionId, playerCckId),
+      getCompetitionConfirmedRegistrations(competitionId),
     ]);
 
     setCompetition(competitionResult);
     setAssignments(assignmentResult);
+    const registration = registrationResult.find((item) => item.cckId.toLowerCase() === playerCckId.toLowerCase());
+    setSelectedEvents(Array.isArray(registration?.selectedEvents) ? registration.selectedEvents : []);
 
     const rounds = (competitionResult?.rounds ?? []).sort(
       (a, b) => new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime(),
     );
-    const roundDetails = await Promise.all(rounds.map((round) => getCompetitionRoundAssignments(round.id)));
+    const [roundDetails, roundConfigs] = await Promise.all([
+      Promise.all(rounds.map((round) => getCompetitionRoundAssignments(round.id))),
+      Promise.all(rounds.map((round) => getAdminRoundGroupConfig(competitionId, round.id))),
+    ]);
     const mapByRound: Record<number, CompetitionRoundAssignments> = {};
     for (const detail of roundDetails) {
       mapByRound[detail.roundIdx] = detail;
     }
     setRoundAssignmentMap(mapByRound);
+    const configMapByRound: Record<number, RoundGroupConfig> = {};
+    for (const config of roundConfigs) {
+      configMapByRound[config.roundIdx] = config;
+    }
+    setRoundConfigMap(configMapByRound);
 
     const nextSelected: Record<string, string[]> = {};
     for (const roleItem of roleItems) {
@@ -78,19 +109,6 @@ export const AdminCompetitionPlayerPage = () => {
       }
     }
     setSelectedGroupsByKey(nextSelected);
-
-    const nextExpanded: Record<number, boolean> = {};
-    for (const round of rounds) {
-      const hasSelection = roleItems.some((roleItem) => {
-        const key = makeFieldKey(round.id, roleItem.role);
-        return (nextSelected[key] ?? []).length > 0;
-      });
-      nextExpanded[round.id] = hasSelection;
-    }
-    if (rounds.length > 0 && !Object.values(nextExpanded).some(Boolean)) {
-      nextExpanded[rounds[0].id] = true;
-    }
-    setExpandedRounds(nextExpanded);
   };
 
   useEffect(() => {
@@ -130,26 +148,7 @@ export const AdminCompetitionPlayerPage = () => {
         : [],
     [competition?.rounds],
   );
-
-  const warnings = useMemo(() => {
-    const items: string[] = [];
-    for (const round of rounds) {
-      const byGroup = new Map<string, string[]>();
-      for (const roleItem of roleItems) {
-        const selected = selectedGroupsByKey[makeFieldKey(round.id, roleItem.role)] ?? [];
-        for (const group of selected) {
-          if (!byGroup.has(group)) byGroup.set(group, []);
-          byGroup.get(group)?.push(roleItem.label);
-        }
-      }
-      for (const [group, labels] of byGroup) {
-        if (labels.length > 1) {
-          items.push(`${round.eventName} ${round.roundName} - 조 ${group}: ${labels.join(', ')} 역할 중복`);
-        }
-      }
-    }
-    return items;
-  }, [rounds, selectedGroupsByKey]);
+  const selectedEventSet = useMemo(() => new Set(selectedEvents.map((item) => normalizeEventName(item))), [selectedEvents]);
 
   if (!isAdminByToken()) return <div className="empty-state">403 Forbidden</div>;
   if (loading) return <div className="empty-state">선수 상세 로딩 중...</div>;
@@ -178,15 +177,6 @@ export const AdminCompetitionPlayerPage = () => {
       />
 
       <div className="comp-content admin-content">
-        {notice ? <div className="player-note">{notice}</div> : null}
-        {warnings.length > 0 ? (
-          <div className="admin-warning-box">
-            {warnings.map((warning) => (
-              <div key={warning}>{warning}</div>
-            ))}
-          </div>
-        ) : null}
-
         <section className="admin-panel">
           <h3>조편성 수정</h3>
           <div className="admin-assignment-list">
@@ -200,37 +190,43 @@ export const AdminCompetitionPlayerPage = () => {
                 (roleItem) => selectedGroupsByKey[makeFieldKey(round.id, roleItem.role)] ?? [],
               );
               const groupNames = toUniqueSortedGroups([...groupNamesFromRound, ...selectedFromAllRoles]);
-              const isOpen = Boolean(expandedRounds[round.id]);
+              const isParticipating =
+                selectedEventSet.size === 0 || selectedEventSet.has(normalizeEventName(round.eventName));
+              const isOpen = isParticipating;
 
               return (
-                <div className="admin-assignment-row" key={round.id}>
-                  <button
-                    type="button"
-                    className="admin-round-toggle"
-                    onClick={() =>
-                      setExpandedRounds((prev) => ({
-                        ...prev,
-                        [round.id]: !prev[round.id],
-                      }))
-                    }
-                  >
-                    <strong>
+                <div
+                  className={`admin-assignment-row ${!isParticipating ? 'admin-assignment-row-inactive' : ''}`}
+                  key={round.id}
+                >
+                  <div className="admin-round-toggle admin-round-toggle-static">
+                    <strong className={!isParticipating ? 'admin-round-title-strike' : ''}>
                       {round.eventName} {round.roundName}
                     </strong>
-                    <span>{isOpen ? '접기' : '열기'}</span>
-                  </button>
+                    <span>{isParticipating ? '참가 종목' : '미참가 종목'}</span>
+                  </div>
 
                   {isOpen ? (
                     <div className="admin-assignment-roles admin-assignment-roles--check">
                       {roleItems.map((roleItem) => {
                         const key = makeFieldKey(round.id, roleItem.role);
                         const selected = selectedGroupsByKey[key] ?? [];
+                        const disabledByEvent = !isParticipating;
 
                         return (
-                          <div className="admin-role-check-card" key={key}>
+                          <div
+                            className={`admin-role-check-card ${disabledByEvent ? 'admin-role-check-card-disabled' : ''}`}
+                            key={key}
+                          >
                             <div className="admin-role-check-head">
                               <strong>{roleItem.label}</strong>
-                              <span>{roleItem.singleSelect ? '1개만 선택' : '복수 선택 가능'}</span>
+                              <span>
+                                {disabledByEvent
+                                  ? '미참가 종목'
+                                  : roleItem.singleSelect
+                                    ? '1개만 선택'
+                                    : '복수 선택 가능'}
+                              </span>
                             </div>
 
                             {groupNames.length === 0 ? (
@@ -239,31 +235,73 @@ export const AdminCompetitionPlayerPage = () => {
                               <div className="admin-role-check-list">
                                 {groupNames.map((groupName) => {
                                   const checked = selected.includes(groupName);
+                                  const roundConfig = roundConfigMap[round.id];
+                                  const groupConfig = roundConfig?.groups?.find((item) => item.groupName === groupName);
+                                  const limitField = roleLimitFieldByRole[roleItem.role];
+                                  const roleLimit = Number(groupConfig?.[limitField] || 0);
+                                  const currentAssignedCount = (roundDetail?.[roleItem.role] ?? []).filter(
+                                    (item) => item.group === groupName,
+                                  ).length;
+                                  const occupiedByRole = roleItems.find((item) => {
+                                    if (item.role === roleItem.role) return false;
+                                    const otherSelected = selectedGroupsByKey[makeFieldKey(round.id, item.role)] ?? [];
+                                    return otherSelected.includes(groupName);
+                                  });
+                                  const disabledByConflict = Boolean(occupiedByRole) && !checked;
+                                  const disabled = disabledByEvent || disabledByConflict;
                                   return (
-                                    <label className="admin-check-item" key={`${key}-${groupName}`}>
+                                    <label
+                                      className={[
+                                        'admin-check-item',
+                                        checked ? 'admin-check-item-checked' : '',
+                                        disabled ? 'admin-check-item-disabled' : '',
+                                        disabledByConflict ? 'admin-check-item-conflict' : '',
+                                      ]
+                                        .filter(Boolean)
+                                        .join(' ')}
+                                      key={`${key}-${groupName}`}
+                                    >
                                       <input
                                         type="checkbox"
+                                        className={disabledByConflict ? 'admin-check-input-conflict' : ''}
                                         checked={checked}
+                                        disabled={disabled}
                                         onChange={() => {
-                                          setSelectedGroupsByKey((prev) => {
-                                            const current = prev[key] ?? [];
-                                            const has = current.includes(groupName);
-                                            let next: string[];
+                                          if (disabled) return;
+                                          const applyChange = () => {
+                                            setSelectedGroupsByKey((prev) => {
+                                              const current = prev[key] ?? [];
+                                              const has = current.includes(groupName);
+                                              let next: string[];
 
-                                            if (roleItem.singleSelect) {
-                                              next = has ? [] : [groupName];
-                                            } else {
-                                              next = has ? current.filter((item) => item !== groupName) : [...current, groupName];
-                                            }
+                                              if (roleItem.singleSelect) {
+                                                next = has ? [] : [groupName];
+                                              } else {
+                                                next = has ? current.filter((item) => item !== groupName) : [...current, groupName];
+                                              }
 
-                                            return {
-                                              ...prev,
-                                              [key]: toUniqueSortedGroups(next),
-                                            };
-                                          });
+                                              return {
+                                                ...prev,
+                                                [key]: toUniqueSortedGroups(next),
+                                              };
+                                            });
+                                          };
+
+                                          if (!checked && roleLimit > 0 && currentAssignedCount >= roleLimit) {
+                                            setConfirmState({
+                                              open: true,
+                                              onConfirm: () => {
+                                                applyChange();
+                                                setConfirmState({ open: false });
+                                              },
+                                            });
+                                            return;
+                                          }
+
+                                          applyChange();
                                         }}
                                       />
-                                      <span>조 {groupName}</span>
+                                      <span>{groupName}조</span>
                                     </label>
                                   );
                                 })}
@@ -286,7 +324,6 @@ export const AdminCompetitionPlayerPage = () => {
               className="admin-save-all-btn"
               onClick={async () => {
                 setSaving(true);
-                setNotice('');
                 try {
                   const tasks: Array<Promise<void>> = [];
                   for (const round of rounds) {
@@ -304,9 +341,9 @@ export const AdminCompetitionPlayerPage = () => {
                   }
                   await Promise.all(tasks);
                   await loadData();
-                  setNotice('조편성 저장이 완료되었습니다.');
+                  setToast({ open: true, message: '조편성 저장이 완료되었습니다.', variant: 'success' });
                 } catch (error) {
-                  setNotice(`저장 실패: ${String(error)}`);
+                  setToast({ open: true, message: `저장 실패: ${String(error)}`, variant: 'error' });
                 } finally {
                   setSaving(false);
                 }
@@ -317,6 +354,24 @@ export const AdminCompetitionPlayerPage = () => {
           </div>
         </section>
       </div>
+
+      <OverlayToast
+        open={toast.open}
+        message={toast.message}
+        variant={toast.variant}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
+      <OverlayConfirm
+        open={confirmState.open}
+        title="정원 초과"
+        message="정원을 초과합니다. 그래도 추가하시겠습니까?"
+        confirmLabel="추가"
+        cancelLabel="취소"
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+        }}
+        onCancel={() => setConfirmState({ open: false })}
+      />
     </div>
   );
 };

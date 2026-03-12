@@ -6,6 +6,7 @@ import type {
   CompetitionRoundAssignments,
   CompetitionStatus,
   ConfirmedRegistration,
+  RoundGroupConfig,
   RoundDayCount,
 } from './types';
 
@@ -19,6 +20,7 @@ type UpdatePlayerAssignmentRequest = {
   roundIdx: number;
   groups: string[];
 };
+type RoundConfigResponse = { data: RoundGroupConfig };
 
 export const getCompetitions = async (status: CompetitionStatus): Promise<Competition[]> => {
   const response = await apiRequest<ListResponse>(`/competitions?status=${status}`);
@@ -80,4 +82,27 @@ export const updateCompetitionPlayerAssignment = async (
   }
 
   throw lastError instanceof Error ? lastError : new Error('player-assignment update failed');
+};
+
+export const getAdminRoundGroupConfig = async (competitionId: number, roundIdx: number): Promise<RoundGroupConfig> => {
+  const response = await apiRequest<RoundConfigResponse>(`/admin/competition/${competitionId}/round/${roundIdx}/config`);
+  return response.data;
+};
+
+export const updateAdminRoundGroupConfig = async (
+  competitionId: number,
+  roundIdx: number,
+  groups: Array<{
+    groupName: string;
+    playerCount: number;
+    judgeCount: number;
+    runnerCount: number;
+    scramblerCount: number;
+  }>,
+): Promise<RoundGroupConfig> => {
+  const response = await apiRequest<RoundConfigResponse>(`/admin/competition/${competitionId}/round/${roundIdx}/config`, {
+    method: 'PUT',
+    body: JSON.stringify({ groups }),
+  });
+  return response.data;
 };
