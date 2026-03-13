@@ -18,7 +18,7 @@ import type {
 } from '@/entities/competition/types';
 import { getAuthInfoByCckId } from '@/features/auth/api';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
-import { OverlayConfirm, OverlayToast } from '@/widgets/overlay';
+import { OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 type RoleMeta = { role: PlayerRole; label: string; singleSelect: boolean };
@@ -34,6 +34,7 @@ const makeFieldKey = (roundIdx: number, role: PlayerRole) => `${roundIdx}-${role
 
 const toUniqueSortedGroups = (groups: string[]) => [...new Set(groups)].sort((a, b) => a.localeCompare(b, 'ko-KR'));
 const normalizeEventName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '');
+const normalizeGroupName = (value: string) => String(value || '').trim();
 const roleLimitFieldByRole: Record<PlayerRole, keyof RoundGroupConfig['groups'][number]> = {
   competition: 'playerCount',
   judge: 'judgeCount',
@@ -60,10 +61,6 @@ export const AdminCompetitionPlayerPage = () => {
     message: '',
     variant: 'info',
   });
-  const [confirmState, setConfirmState] = useState<{
-    open: boolean;
-    onConfirm?: () => void;
-  }>({ open: false });
 
   const loadData = async () => {
     if (!Number.isFinite(competitionId) || !playerCckId) return;
@@ -236,12 +233,21 @@ export const AdminCompetitionPlayerPage = () => {
                                 {groupNames.map((groupName) => {
                                   const checked = selected.includes(groupName);
                                   const roundConfig = roundConfigMap[round.id];
-                                  const groupConfig = roundConfig?.groups?.find((item) => item.groupName === groupName);
+                                  const normalizedGroupName = normalizeGroupName(groupName);
+                                  const groupConfig = roundConfig?.groups?.find(
+                                    (item) => normalizeGroupName(item.groupName) === normalizedGroupName,
+                                  );
                                   const limitField = roleLimitFieldByRole[roleItem.role];
                                   const roleLimit = Number(groupConfig?.[limitField] || 0);
                                   const currentAssignedCount = (roundDetail?.[roleItem.role] ?? []).filter(
-                                    (item) => item.group === groupName,
+                                    (item) => normalizeGroupName(item.group) === normalizedGroupName,
                                   ).length;
+                                  const alreadyAssignedToThisGroup = (assignments[roleItem.role] ?? []).some(
+                                    (item) =>
+                                      item.roundIdx === round.id &&
+                                      normalizeGroupName(item.group) === normalizedGroupName,
+                                  );
+                                  const projectedCount = currentAssignedCount + (alreadyAssignedToThisGroup ? 0 : 1);
                                   const occupiedByRole = roleItems.find((item) => {
                                     if (item.role === roleItem.role) return false;
                                     const otherSelected = selectedGroupsByKey[makeFieldKey(round.id, item.role)] ?? [];
@@ -287,15 +293,20 @@ export const AdminCompetitionPlayerPage = () => {
                                             });
                                           };
 
-                                          if (!checked && roleLimit > 0 && currentAssignedCount >= roleLimit) {
-                                            setConfirmState({
+                                          if (!checked && roleLimit > 0 && projectedCount > roleLimit) {
+                                            if (roleItem.role === 'competition') {
+                                              setToast({
+                                                open: true,
+                                                variant: 'error',
+                                                message: `${round.eventName} ${round.roundName} ${groupName}조 출전 정원(${roleLimit})이 가득 찼습니다.`,
+                                              });
+                                              return;
+                                            }
+                                            setToast({
                                               open: true,
-                                              onConfirm: () => {
-                                                applyChange();
-                                                setConfirmState({ open: false });
-                                              },
+                                              variant: 'info',
+                                              message: `${groupName}조 ${roleItem.label} 정원(${roleLimit})을 초과합니다. 예비 운영을 위해 추가합니다.`,
                                             });
-                                            return;
                                           }
 
                                           applyChange();
@@ -325,6 +336,57 @@ export const AdminCompetitionPlayerPage = () => {
               onClick={async () => {
                 setSaving(true);
                 try {
+                  const overLimitCompetitionMessages: string[] = [];
+                  const overLimitReserveMessages: string[] = [];
+
+                  for (const round of rounds) {
+                    const roundDetail = roundAssignmentMap[round.id];
+                    const roundConfig = roundConfigMap[round.id];
+                    for (const roleItem of roleItems) {
+                      const groups = selectedGroupsByKey[makeFieldKey(round.id, roleItem.role)] ?? [];
+                      const currentAssignmentSet = new Set(
+                        (assignments[roleItem.role] ?? [])
+                          .filter((item) => item.roundIdx === round.id)
+                          .map((item) => normalizeGroupName(item.group)),
+                      );
+                      for (const groupName of groups) {
+                        const normalizedGroupName = normalizeGroupName(groupName);
+                        const limitField = roleLimitFieldByRole[roleItem.role];
+                        const groupConfig = roundConfig?.groups?.find(
+                          (item) => normalizeGroupName(item.groupName) === normalizedGroupName,
+                        );
+                        const roleLimit = Number(groupConfig?.[limitField] || 0);
+                        if (roleLimit <= 0) continue;
+
+                        const currentAssignedCount = (roundDetail?.[roleItem.role] ?? []).filter(
+                          (item) => normalizeGroupName(item.group) === normalizedGroupName,
+                        ).length;
+                        const alreadyAssigned = currentAssignmentSet.has(normalizedGroupName);
+                        const projectedCount = currentAssignedCount + (alreadyAssigned ? 0 : 1);
+                        if (projectedCount <= roleLimit) continue;
+
+                        if (roleItem.role === 'competition') {
+                          overLimitCompetitionMessages.push(
+                            `${round.eventName} ${round.roundName} ${groupName}조 출전 정원(${roleLimit}) 초과`,
+                          );
+                        } else {
+                          overLimitReserveMessages.push(
+                            `${round.eventName} ${round.roundName} ${groupName}조 ${roleItem.label} 정원(${roleLimit}) 초과`,
+                          );
+                        }
+                      }
+                    }
+                  }
+
+                  if (overLimitCompetitionMessages.length > 0) {
+                    setToast({
+                      open: true,
+                      variant: 'error',
+                      message: `출전 정원 초과로 저장할 수 없습니다. (${overLimitCompetitionMessages[0]})`,
+                    });
+                    return;
+                  }
+
                   const tasks: Array<Promise<void>> = [];
                   for (const round of rounds) {
                     for (const roleItem of roleItems) {
@@ -341,7 +403,15 @@ export const AdminCompetitionPlayerPage = () => {
                   }
                   await Promise.all(tasks);
                   await loadData();
-                  setToast({ open: true, message: '조편성 저장이 완료되었습니다.', variant: 'success' });
+                  if (overLimitReserveMessages.length > 0) {
+                    setToast({
+                      open: true,
+                      message: `저장 완료 (주의: ${overLimitReserveMessages[0]})`,
+                      variant: 'info',
+                    });
+                  } else {
+                    setToast({ open: true, message: '조편성 저장이 완료되었습니다.', variant: 'success' });
+                  }
                 } catch (error) {
                   setToast({ open: true, message: `저장 실패: ${String(error)}`, variant: 'error' });
                 } finally {
@@ -360,17 +430,6 @@ export const AdminCompetitionPlayerPage = () => {
         message={toast.message}
         variant={toast.variant}
         onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-      />
-      <OverlayConfirm
-        open={confirmState.open}
-        title="정원 초과"
-        message="정원을 초과합니다. 그래도 추가하시겠습니까?"
-        confirmLabel="추가"
-        cancelLabel="취소"
-        onConfirm={() => {
-          confirmState.onConfirm?.();
-        }}
-        onCancel={() => setConfirmState({ open: false })}
       />
     </div>
   );

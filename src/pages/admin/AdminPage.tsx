@@ -54,55 +54,50 @@ export const AdminPage = () => {
         title="관리자 페이지"
         subtitle={
           <>
-            <span>대회 선택</span>
+            <span>Group Admin Page</span>
           </>
         }
       />
       <div className="comp-content admin-content">
-        <section className="admin-panel">
-          <h3>대회 목록</h3>
-          <div className="admin-player-table-wrap">
-            <table className="admin-player-table">
-              <thead>
-                <tr>
-                  <th>대회명</th>
-                  <th>장소</th>
-                  <th>기간</th>
-                </tr>
-              </thead>
-              <tbody>
-                {uniqueCompetitions.map((competition) => (
-                  <tr
-                    key={competition.id}
-                    className="admin-player-table-row"
-                    onClick={() => navigate(`/admin/competition/${competition.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        navigate(`/admin/competition/${competition.id}`);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                  >
-                    <td>{competition.name}</td>
-                    <td>{competition.location || '장소 미정'}</td>
-                    <td>
-                      {competition.dateStart} ~ {competition.dateEnd}
-                    </td>
-                  </tr>
-                ))}
-                {uniqueCompetitions.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="admin-player-table-empty">
-                      대회가 없습니다.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <table className="admin-player-table">
+          <thead>
+            <tr>
+              <th>대회명</th>
+              <th>장소</th>
+              <th>기간</th>
+            </tr>
+          </thead>
+          <tbody>
+            {uniqueCompetitions.map((competition) => (
+              <tr
+                key={competition.id}
+                className="admin-player-table-row"
+                onClick={() => navigate(`/admin/competition/${competition.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate(`/admin/competition/${competition.id}`);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+              >
+                <td>{competition.name}</td>
+                <td>{competition.location || '장소 미정'}</td>
+                <td>
+                  {competition.dateStart} ~ {competition.dateEnd}
+                </td>
+              </tr>
+            ))}
+            {uniqueCompetitions.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="admin-player-table-empty">
+                  대회가 없습니다.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getCompetitionDetail } from '@/entities/competition/api';
 import type { CompetitionDetail } from '@/entities/competition/types';
+import { AdminRoundGroupConfigEditorList } from '@/pages/admin/AdminRoundGroupConfigEditorList';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 export const AdminCompetitionGroupsPage = () => {
-  const navigate = useNavigate();
   const { compIdx } = useParams();
   const competitionId = Number(compIdx);
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
@@ -72,37 +72,9 @@ export const AdminCompetitionGroupsPage = () => {
       />
 
       <div className="comp-content admin-content">
-        <div className="admin-top-actions admin-top-actions-right">
-          <button type="button" className="admin-top-btn admin-top-btn-active" onClick={() => navigate(`/admin/competition/${competitionId}/groups`)}>
-            조 설정
-          </button>
-          <button type="button" className="admin-top-btn" onClick={() => navigate(`/admin/competition/${competitionId}/auto`)}>
-            자동 조편성
-          </button>
-        </div>
-
         <section className="admin-panel">
           <h3>라운드별 조 설정</h3>
-          <div className="registration-list">
-            {rounds.length === 0 ? (
-              <div className="card-list-empty">라운드가 없습니다.</div>
-            ) : (
-              rounds.map((round) => (
-                <Link
-                  key={round.id}
-                  className="registration-row registration-row-link round-list-link"
-                  to={`/admin/competition/${competitionId}/round/${round.id}`}
-                >
-                  <div className="round-list-line">
-                    <strong>
-                      {round.eventName} {round.roundName}
-                    </strong>
-                    <span>조 이름/정원 설정</span>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
+          <AdminRoundGroupConfigEditorList competitionId={competitionId} rounds={rounds} />
         </section>
       </div>
     </div>

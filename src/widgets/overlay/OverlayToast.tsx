@@ -22,19 +22,26 @@ export const OverlayToast = ({
   message,
   variant = 'info',
   onClose,
-  autoHideMs = 2600,
+  autoHideMs = 3000,
 }: OverlayToastProps) => {
-  const EXIT_MS = 220;
+  const EXIT_ANIMATION_MS = 260;
   const [rendered, setRendered] = useState(false);
   const [visible, setVisible] = useState(false);
   const [displayMessage, setDisplayMessage] = useState('');
-  const [displayVariant, setDisplayVariant] = useState<OverlayToastVariant>('info');
+  const [displayVariant, setDisplayVariant] = useState<OverlayToastVariant>(variant);
+  const [toastKey, setToastKey] = useState(0);
   const hideTimerRef = useRef<number | null>(null);
+  const latestToastSignatureRef = useRef('');
 
   useEffect(() => {
     if (!open || !message) return;
+    const nextSignature = `${variant}:${message}`;
+    if (latestToastSignatureRef.current === nextSignature) return;
+
+    latestToastSignatureRef.current = nextSignature;
     setDisplayMessage(message);
     setDisplayVariant(variant);
+    setToastKey((prev) => prev + 1);
   }, [open, message, variant]);
 
   useEffect(() => {
@@ -52,26 +59,41 @@ export const OverlayToast = ({
     setVisible(false);
     hideTimerRef.current = window.setTimeout(() => {
       setRendered(false);
-    }, EXIT_MS);
+    }, EXIT_ANIMATION_MS);
+
+    return () => {
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+    };
   }, [open]);
 
   useEffect(() => {
-    if (!open || !onClose) return;
+    if (!open || !onClose || !message) return;
     const timer = window.setTimeout(onClose, autoHideMs);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [open, autoHideMs, onClose]);
+  }, [open, autoHideMs, onClose, message]);
 
   if (!rendered || !displayMessage) return null;
 
   return createPortal(
     <div className="overlay-toast-wrap" aria-live="polite" role="status">
-      <div className={`overlay-toast overlay-toast--${displayVariant} ${visible ? 'overlay-toast--visible' : ''}`.trim()}>
+      <div
+        key={toastKey}
+        className={`overlay-toast overlay-toast--${displayVariant} ${visible ? 'overlay-toast--visible overlay-toast--enter' : 'overlay-toast--hidden'}`.trim()}
+      >
         {iconMap[displayVariant] ? (
           <img className="overlay-toast-icon" src={iconMap[displayVariant] ?? ''} alt="" aria-hidden="true" />
         ) : null}
         <span className="overlay-toast-message">{displayMessage}</span>
+        {onClose ? (
+          <button type="button" className="overlay-toast-close" onClick={onClose} aria-label="닫기">
+            <img src="/icon/modal/close.svg" alt="" aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
     </div>,
     document.body,

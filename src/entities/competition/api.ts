@@ -100,9 +100,18 @@ export const updateAdminRoundGroupConfig = async (
     scramblerCount: number;
   }>,
 ): Promise<RoundGroupConfig> => {
-  const response = await apiRequest<RoundConfigResponse>(`/admin/competition/${competitionId}/round/${roundIdx}/config`, {
-    method: 'PUT',
-    body: JSON.stringify({ groups }),
-  });
-  return response.data;
+  const path = `/admin/competition/${competitionId}/round/${roundIdx}/config`;
+  try {
+    const response = await apiRequest<RoundConfigResponse>(path, {
+      method: 'PUT',
+      body: JSON.stringify({ groups }),
+    });
+    return response.data;
+  } catch {
+    const response = await apiRequest<RoundConfigResponse>(path, {
+      method: 'POST',
+      body: JSON.stringify({ groups }),
+    });
+    return response.data;
+  }
 };

@@ -197,7 +197,7 @@ export const AdminCompetitionPage = () => {
                         <strong>
                           {round.eventName} {round.roundName}
                         </strong>
-                        <span>라운드 조/배정 편집</span>
+                        <span>라운드 인원/역할 편집</span>
                       </div>
                     </Link>
                   ))

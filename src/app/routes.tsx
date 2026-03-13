@@ -1,37 +1,36 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { startLogin } from '@/features/auth/api';
 import { AdminCompetitionAutoPage } from '@/pages/admin/AdminCompetitionAutoPage';
 import { AdminCompetitionGroupsPage } from '@/pages/admin/AdminCompetitionGroupsPage';
-import { Header } from '@/widgets/header/Header.tsx';
-import { logout, startLogin } from '@/features/auth/api';
 import { AdminCompetitionPage } from '@/pages/admin/AdminCompetitionPage';
 import { AdminCompetitionPlayerPage } from '@/pages/admin/AdminCompetitionPlayerPage';
 import { AdminCompetitionRoundPage } from '@/pages/admin/AdminCompetitionRoundPage';
 import { AdminPage } from '@/pages/admin/AdminPage';
-import { CompetitionPlayerPage } from '@/pages/competition/CompetitionPlayerPage';
-import { CompetitionPage } from '@/pages/competition/CompetitionPage';
-import { CompetitionRoundPage } from '@/pages/competition/CompetitionRoundPage';
 import { ConfirmPage } from '@/pages/ConfirmPage';
 import { LogoutPage } from '@/pages/LogoutPage';
+import { CompetitionPage } from '@/pages/competition/CompetitionPage';
+import { CompetitionPlayerPage } from '@/pages/competition/CompetitionPlayerPage';
+import { CompetitionRoundPage } from '@/pages/competition/CompetitionRoundPage';
 import { MainPage } from '@/pages/main/MainPage';
-import './App.css';
+import { Header } from '@/widgets/header/Header';
+
+type AppRoutesProps = {
+  onLogoutClick: () => void | Promise<void>;
+};
 
 const LoginRedirectPage = () => {
   useEffect(() => {
     startLogin();
   }, []);
+
   return <div className="empty-state">로그인 페이지로 이동 중...</div>;
 };
 
-function AppShell() {
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = '/';
-  };
-
-  return (
+export const AppRoutes = ({ onLogoutClick }: AppRoutesProps) => (
+  <BrowserRouter>
     <div className="app-shell">
-      <Header onLogoutClick={handleLogout} />
+      <Header onLogoutClick={onLogoutClick} />
       <main className="content-area">
         <Routes>
           <Route path="/" element={<MainPage />} />
@@ -53,13 +52,5 @@ function AppShell() {
         </Routes>
       </main>
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppShell />
-    </BrowserRouter>
-  );
-}
+  </BrowserRouter>
+);

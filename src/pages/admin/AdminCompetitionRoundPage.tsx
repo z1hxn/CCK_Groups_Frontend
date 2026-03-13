@@ -5,9 +5,16 @@ import {
   getCompetitionConfirmedRegistrations,
   getCompetitionDetail,
   getCompetitionRoundAssignments,
+  updateCompetitionPlayerAssignment,
   updateAdminRoundGroupConfig,
 } from '@/entities/competition/api';
-import type { CompetitionDetail, CompetitionRoundAssignments, PlayerRole, RoundGroupConfig } from '@/entities/competition/types';
+import type {
+  CompetitionDetail,
+  CompetitionRoundAssignments,
+  ConfirmedRegistration,
+  PlayerRole,
+  RoundGroupConfig,
+} from '@/entities/competition/types';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
 import { OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
@@ -50,8 +57,11 @@ export const AdminCompetitionRoundPage = () => {
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [assignments, setAssignments] = useState<CompetitionRoundAssignments | null>(null);
   const [nameByCckId, setNameByCckId] = useState<Record<string, string>>({});
+  const [registrations, setRegistrations] = useState<ConfirmedRegistration[]>([]);
   const [groups, setGroups] = useState<EditableRoundGroup[]>([]);
   const [newGroupName, setNewGroupName] = useState('');
+  const [selectedAddByKey, setSelectedAddByKey] = useState<Record<string, string>>({});
+  const [mutatingKey, setMutatingKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' | 'info' }>({
@@ -73,6 +83,7 @@ export const AdminCompetitionRoundPage = () => {
     setCompetition(competitionResult);
     setAssignments(assignmentResult);
     setGroups(normalizeRoundGroups(configResult.groups || []));
+    setRegistrations(registrations);
     setNameByCckId(
       Object.fromEntries(
         registrations.map((item) => [
@@ -120,6 +131,34 @@ export const AdminCompetitionRoundPage = () => {
   if (!isAdminByToken()) return <div className="empty-state">403 Forbidden</div>;
   if (loading) return <div className="empty-state">라운드 편집 정보 로딩 중...</div>;
   if (!competition || !assignments) return <div className="empty-state">라운드 정보를 불러올 수 없습니다.</div>;
+
+  const registrationOptions = [...registrations]
+    .map((item) => ({
+      cckId: item.cckId,
+      label: item.enName ? `${item.name} (${item.enName})` : item.name || item.cckId,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'ko-KR'));
+
+  const getCurrentRoleGroups = (role: PlayerRole, cckId: string) =>
+    [...new Set((assignments[role] ?? []).filter((item) => item.cckId === cckId).map((item) => item.group))];
+
+  const updateRoleGroups = async (role: PlayerRole, cckId: string, groupsToSave: string[], actionKey: string) => {
+    setMutatingKey(actionKey);
+    try {
+      await updateCompetitionPlayerAssignment(competitionId, {
+        cckId,
+        role,
+        roundIdx: targetRoundIdx,
+        groups: groupsToSave,
+      });
+      await loadData();
+      setToast({ open: true, message: '배정이 수정되었습니다.', variant: 'success' });
+    } catch (error) {
+      setToast({ open: true, message: `배정 수정 실패: ${String(error)}`, variant: 'error' });
+    } finally {
+      setMutatingKey(null);
+    }
+  };
 
   const roundTitle = assignments.round
     ? `${assignments.round.cubeEventName} ${assignments.round.roundName}`
@@ -181,7 +220,7 @@ export const AdminCompetitionRoundPage = () => {
                   <th>선수 정원</th>
                   <th>심판 정원</th>
                   <th>러너 정원</th>
-                  <th>스크램 정원</th>
+                  <th>스크램블러 정원</th>
                   <th>삭제</th>
                 </tr>
               </thead>
@@ -333,15 +372,83 @@ export const AdminCompetitionRoundPage = () => {
                                 <span className="round-role-empty">배정 없음</span>
                               ) : (
                                 roleRows.map((assignment) => (
-                                  <Link
-                                    key={`${roleItem.role}-${assignment.idx}`}
-                                    className="round-role-member"
-                                    to={`/admin/competition/${competitionId}/player/${encodeURIComponent(assignment.cckId)}`}
-                                  >
-                                    {nameByCckId[assignment.cckId.toLowerCase()] ?? assignment.cckId}
-                                  </Link>
+                                  <div key={`${roleItem.role}-${assignment.idx}`} className="round-role-member-edit-row">
+                                    <Link
+                                      className="round-role-member"
+                                      to={`/admin/competition/${competitionId}/player/${encodeURIComponent(assignment.cckId)}`}
+                                    >
+                                      {nameByCckId[assignment.cckId.toLowerCase()] ?? assignment.cckId}
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      className="admin-table-delete-btn"
+                                      disabled={mutatingKey === `remove-${roleItem.role}-${assignment.cckId}-${groupItem.groupName}`}
+                                      onClick={async () => {
+                                        const currentGroups = getCurrentRoleGroups(roleItem.role, assignment.cckId);
+                                        const nextGroups = currentGroups.filter((group) => group !== groupItem.groupName);
+                                        await updateRoleGroups(
+                                          roleItem.role,
+                                          assignment.cckId,
+                                          nextGroups,
+                                          `remove-${roleItem.role}-${assignment.cckId}-${groupItem.groupName}`,
+                                        );
+                                      }}
+                                    >
+                                      제거
+                                    </button>
+                                  </div>
                                 ))
                               )}
+
+                              <div className="round-role-edit-controls">
+                                <select
+                                  value={selectedAddByKey[`${groupItem.groupName}-${roleItem.role}`] ?? ''}
+                                  onChange={(event) =>
+                                    setSelectedAddByKey((prev) => ({
+                                      ...prev,
+                                      [`${groupItem.groupName}-${roleItem.role}`]: event.target.value,
+                                    }))
+                                  }
+                                >
+                                  <option value="">선수 선택</option>
+                                  {registrationOptions.map((option) => (
+                                    <option key={`${groupItem.groupName}-${roleItem.role}-${option.cckId}`} value={option.cckId}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  className="admin-save-all-btn round-role-add-btn"
+                                  disabled={
+                                    mutatingKey === `add-${groupItem.groupName}-${roleItem.role}` ||
+                                    !(selectedAddByKey[`${groupItem.groupName}-${roleItem.role}`] ?? '').trim()
+                                  }
+                                  onClick={async () => {
+                                    const cckIdToAdd = (selectedAddByKey[`${groupItem.groupName}-${roleItem.role}`] ?? '').trim();
+                                    if (!cckIdToAdd) return;
+
+                                    const currentGroups = getCurrentRoleGroups(roleItem.role, cckIdToAdd);
+                                    const nextGroups =
+                                      roleItem.role === 'competition'
+                                        ? [groupItem.groupName]
+                                        : [...new Set([...currentGroups, groupItem.groupName])];
+
+                                    await updateRoleGroups(
+                                      roleItem.role,
+                                      cckIdToAdd,
+                                      nextGroups,
+                                      `add-${groupItem.groupName}-${roleItem.role}`,
+                                    );
+                                    setSelectedAddByKey((prev) => ({
+                                      ...prev,
+                                      [`${groupItem.groupName}-${roleItem.role}`]: '',
+                                    }));
+                                  }}
+                                >
+                                  추가
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
