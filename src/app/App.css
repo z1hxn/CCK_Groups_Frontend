@@ -1395,6 +1395,60 @@
   gap: 8px;
 }
 
+.admin-auto-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-auto-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-auto-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-auto-step {
+  border: 1px solid #dbe1f0;
+  border-radius: 10px;
+  background: #f8faff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-auto-step strong {
+  font-size: 13px;
+  color: #1f2a44;
+}
+
+.admin-auto-step span {
+  font-size: 12px;
+  color: #5c6785;
+}
+
+.admin-auto-step.active {
+  border-color: #111111;
+  background: #eff4ff;
+}
+
+.admin-auto-step.done {
+  border-color: #b9c5df;
+  background: #f3f7ff;
+}
+
+.admin-auto-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .admin-player-picker input,
 .admin-player-picker select {
   flex: 1;
@@ -1453,6 +1507,80 @@
 .admin-player-table-empty {
   text-align: center !important;
   color: #8a8a8f;
+}
+
+.admin-auto-result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-auto-result-card {
+  border: 1px solid #dbe1f0;
+  border-radius: 10px;
+  background: #f8faff;
+  min-height: 72px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.admin-auto-result-card strong {
+  color: #334155;
+  font-size: 13px;
+}
+
+.admin-auto-result-card span {
+  color: #111322;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.admin-auto-shortage {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.admin-info-box {
+  border: 1px solid #c8d9ff;
+  background: #eef4ff;
+  color: #1f3f82;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-auto-loading {
+  border: 1px solid #dbe1f0;
+  border-radius: 10px;
+  background: #f8faff;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.admin-auto-loading-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid #111111;
+  border-top-color: transparent;
+  animation: adminAutoSpin 0.9s linear infinite;
+}
+
+@keyframes adminAutoSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .admin-table-link {
@@ -2265,5 +2393,17 @@
 
   .admin-assignment-role-item label {
     min-width: 0;
+  }
+
+  .admin-auto-result-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-auto-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-auto-selection-grid {
+    grid-template-columns: 1fr;
   }
 }

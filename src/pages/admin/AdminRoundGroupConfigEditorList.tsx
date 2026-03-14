@@ -79,6 +79,39 @@ const distributePlayersByGroupCount = (totalPlayers: number, groupCount: number)
   return Array.from({ length: groupCount }, (_, index) => base + (index < remainder ? 1 : 0));
 };
 
+const buildPlayerCapacityWarnings = (participantCount: number, groups: EditableGroup[]): string[] => {
+  if (participantCount <= 0) return [];
+
+  const normalizedGroups = groups.map((group) => ({
+    ...group,
+    playerCount: Math.max(0, Number(group.playerCount) || 0),
+    judgeCount: Math.max(0, Number(group.judgeCount) || 0),
+    runnerCount: Math.max(0, Number(group.runnerCount) || 0),
+    scramblerCount: Math.max(0, Number(group.scramblerCount) || 0),
+  }));
+  const warnings: string[] = [];
+  const totalStaffCapacity = normalizedGroups.reduce(
+    (sum, group) => sum + group.judgeCount + group.runnerCount + group.scramblerCount,
+    0,
+  );
+
+  const overHalfGroups = normalizedGroups
+    .filter((group) => group.playerCount > participantCount / 2)
+    .map((group) => group.groupName || '(이름 없음)');
+  if (normalizedGroups.length >= 2 && overHalfGroups.length > 0) {
+    warnings.push(`한 조 정원이 전체 참가자의 절반을 초과했습니다: ${overHalfGroups.join(', ')}`);
+  }
+
+  if (normalizedGroups.length === 1 && totalStaffCapacity > 0) {
+    const singleGroup = normalizedGroups[0];
+    if (singleGroup.playerCount >= participantCount) {
+      warnings.push('현재 설정은 1개 조에 참가자가 전부 출전해 스탭 배정이 불가능합니다. 조를 2개 이상으로 나누세요.');
+    }
+  }
+
+  return warnings;
+};
+
 type Props = {
   competitionId: number;
   rounds: Round[];
@@ -168,6 +201,7 @@ export const AdminRoundGroupConfigEditorList = ({ competitionId, rounds }: Props
   const selectedRoundGroups = ensureFinalRoundDefaultGroup(selectedRound, groupsByRound[selectedRound.id] ?? []);
   const selectedRoundParticipantCount = participantCountByRound[selectedRound.id] ?? 0;
   const recommendedPlayerCounts = distributePlayersByGroupCount(selectedRoundParticipantCount, selectedRoundGroups.length);
+  const playerCapacityWarnings = buildPlayerCapacityWarnings(selectedRoundParticipantCount, selectedRoundGroups);
   const selectedNamingMode = namingModeByRound[selectedRound.id] ?? 'number';
   const customGroupName = customGroupNameByRound[selectedRound.id] ?? '';
   const isSaving = savingRoundIdx === selectedRound.id;
@@ -232,6 +266,14 @@ export const AdminRoundGroupConfigEditorList = ({ competitionId, rounds }: Props
               추천 정원 적용
             </button>
           </div>
+
+          {playerCapacityWarnings.length > 0 ? (
+            <div className="admin-warning-box">
+              {playerCapacityWarnings.map((message) => (
+                <span key={`${selectedRound.id}-${message}`}>{message}</span>
+              ))}
+            </div>
+          ) : null}
 
           <div className="admin-group-editor admin-group-editor--split">
             <select
@@ -430,6 +472,13 @@ export const AdminRoundGroupConfigEditorList = ({ competitionId, rounds }: Props
               className="admin-save-all-btn"
               onClick={async () => {
                 const groupsToSave = ensureFinalRoundDefaultGroup(selectedRound, groupsByRound[selectedRound.id] ?? []);
+                const warnings = buildPlayerCapacityWarnings(selectedRoundParticipantCount, groupsToSave);
+                if (warnings.length > 0) {
+                  const confirmed = window.confirm(
+                    `다음 경고가 있습니다.\n- ${warnings.join('\n- ')}\n\n그래도 저장하시겠습니까?`,
+                  );
+                  if (!confirmed) return;
+                }
                 try {
                   setSavingRoundIdx(selectedRound.id);
                   await updateAdminRoundGroupConfig(competitionId, selectedRound.id, groupsToSave);

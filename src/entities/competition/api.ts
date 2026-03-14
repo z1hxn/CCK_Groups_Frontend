@@ -30,6 +30,45 @@ type ResetAssignmentsResponse = {
     reset: boolean;
   };
 };
+type AutoAssignResponse = {
+  data: {
+    compIdx: number;
+    competitionName: string;
+    rounds: Array<{
+      roundIdx: number;
+      eventName: string;
+      roundName: string;
+      groupCount: number;
+      participantCount?: number;
+      skipped?: boolean;
+      reason?: string;
+      playerAssigned?: number;
+      playerRequested?: number;
+      scramblerAssigned?: number;
+      scramblerRequested?: number;
+      runnerAssigned?: number;
+      runnerRequested?: number;
+      judgeAssigned?: number;
+      judgeRequested?: number;
+      adminFallbackUsed?: boolean;
+    }>;
+    inserted: {
+      competition: number;
+      scrambler: number;
+      runner: number;
+      judge: number;
+    };
+    needsManualAssignment?: boolean;
+    manualAssignmentRoundCount?: number;
+    manualAssignmentRounds?: Array<{
+      roundIdx: number;
+      eventName: string;
+      roundName: string;
+      reason: string;
+    }>;
+    autoAssigned: boolean;
+  };
+};
 
 export const getCompetitions = async (status: CompetitionStatus): Promise<Competition[]> => {
   const response = await apiRequest<ListResponse>(`/competitions?status=${status}`);
@@ -149,4 +188,42 @@ export const resetCompetitionAssignments = async (
   }
 
   throw lastError instanceof Error ? lastError : new Error('reset-assignments failed');
+};
+
+export const autoAssignCompetition = async (
+  competitionId: number,
+  payload: {
+    confirmCompetitionName: string;
+    scramblerCandidateCckIds: string[];
+    excludedCckIds: string[];
+  },
+): Promise<AutoAssignResponse['data']> => {
+  const candidatePaths = [
+    `/admin/competition/${competitionId}/auto-assign`,
+    `/admin/competitions/${competitionId}/auto-assign`,
+    `/v1/admin/competition/${competitionId}/auto-assign`,
+  ];
+
+  let lastError: unknown = null;
+  for (const path of candidatePaths) {
+    try {
+      const response = await apiRequest<AutoAssignResponse>(path, {
+        method: 'POST',
+        body: JSON.stringify({
+          confirmCompetitionName: payload.confirmCompetitionName,
+          scrambler: {
+            candidateCckIds: payload.scramblerCandidateCckIds,
+          },
+          exclusion: {
+            cckIds: payload.excludedCckIds,
+          },
+        }),
+      });
+      return response.data;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('auto-assign failed');
 };
