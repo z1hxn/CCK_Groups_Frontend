@@ -6,6 +6,7 @@ import {
   getCompetitionRoundAssignments,
 } from '@/entities/competition/api';
 import type { CompetitionDetail, CompetitionRoundAssignments, PlayerRole } from '@/entities/competition/types';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 type RoleItem = {
@@ -70,7 +71,7 @@ export const CompetitionRoundPage = () => {
 
         const mapEntries = registrations.map((item) => {
           const displayName = item.enName ? `${item.name} (${item.enName})` : item.name;
-          return [item.cckId.toLowerCase(), displayName] as const;
+          return [normalizeCckId(item.cckId), displayName] as const;
         });
         setNameByCckId(Object.fromEntries(mapEntries));
       } finally {
@@ -142,8 +143,9 @@ export const CompetitionRoundPage = () => {
   const filteredRows = rowEntries.filter((entry) => {
     const keyword = query.trim().toLowerCase();
     if (!keyword) return true;
-    const name = nameByCckId[entry.assignment.cckId.toLowerCase()] ?? entry.assignment.cckId;
-    return name.toLowerCase().includes(keyword) || entry.assignment.cckId.toLowerCase().includes(keyword);
+    const normalizedCckId = normalizeCckId(entry.assignment.cckId);
+    const name = nameByCckId[normalizedCckId] ?? normalizedCckId;
+    return name.toLowerCase().includes(keyword) || normalizedCckId.toLowerCase().includes(keyword);
   });
 
   return (
@@ -238,7 +240,7 @@ export const CompetitionRoundPage = () => {
                     >
                       <span className={`player-role-badge ${entry.className}`}>{entry.label}</span>
                       <span>
-                        {nameByCckId[entry.assignment.cckId.toLowerCase()] ?? entry.assignment.cckId}
+                        {nameByCckId[normalizeCckId(entry.assignment.cckId)] ?? normalizeCckId(entry.assignment.cckId)}
                       </span>
                     </Link>
                   ))

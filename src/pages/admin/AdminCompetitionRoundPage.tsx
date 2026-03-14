@@ -14,6 +14,7 @@ import type {
   PlayerRole,
   RoundGroupConfig,
 } from '@/entities/competition/types';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
 import { OverlayConfirm, OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
@@ -98,7 +99,7 @@ export const AdminCompetitionRoundPage = () => {
     setNameByCckId(
       Object.fromEntries(
         registrations.map((item) => [
-          item.cckId.toLowerCase(),
+          normalizeCckId(item.cckId),
           item.enName ? `${item.name} (${item.enName})` : item.name || item.cckId,
         ]),
       ),
@@ -163,14 +164,14 @@ export const AdminCompetitionRoundPage = () => {
         if (selected.length === 0) return true;
         return selected.map((value) => normalizeEventName(value)).includes(normalizeEventName(assignments.round?.cubeEventName ?? ''));
       })
-      .map((item) => item.cckId.toLowerCase()),
+      .map((item) => normalizeCckId(item.cckId)),
   );
 
   const registrationOptions = [...registrations]
     .map((item) => ({
-      cckId: item.cckId,
+      cckId: normalizeCckId(item.cckId),
       label: item.enName ? `${item.name} (${item.enName})` : item.name || item.cckId,
-      isParticipant: participantSet.has(item.cckId.toLowerCase()),
+      isParticipant: participantSet.has(normalizeCckId(item.cckId)),
     }))
     .sort((a, b) => a.label.localeCompare(b.label, 'ko-KR'));
 
@@ -180,7 +181,7 @@ export const AdminCompetitionRoundPage = () => {
   };
 
   const getCurrentRoleGroups = (role: PlayerRole, cckId: string) =>
-    [...new Set((assignments[role] ?? []).filter((item) => item.cckId === cckId).map((item) => item.group))];
+    [...new Set((assignments[role] ?? []).filter((item) => normalizeCckId(item.cckId) === normalizeCckId(cckId)).map((item) => item.group))];
 
   const getRoleLimit = (role: PlayerRole, groupName: string) => {
     const field = roleLimitFieldByRole[role];
@@ -195,7 +196,7 @@ export const AdminCompetitionRoundPage = () => {
       (item) => normalizeGroupName(item.group) === normalizeGroupName(groupName),
     ).length;
     const alreadyAssigned = (assignments[role] ?? []).some(
-      (item) => item.cckId === cckId && normalizeGroupName(item.group) === normalizeGroupName(groupName),
+      (item) => normalizeCckId(item.cckId) === normalizeCckId(cckId) && normalizeGroupName(item.group) === normalizeGroupName(groupName),
     );
     const projectedCount = currentAssignedCount + (alreadyAssigned ? 0 : 1);
     if (projectedCount <= roleLimit) return { blocked: false, warn: false, roleLimit };
@@ -259,8 +260,9 @@ export const AdminCompetitionRoundPage = () => {
   const filteredRows = rowEntries.filter((entry) => {
     const keyword = query.trim().toLowerCase();
     if (!keyword) return true;
-    const name = nameByCckId[entry.cckId.toLowerCase()] ?? entry.cckId;
-    return name.toLowerCase().includes(keyword) || entry.cckId.toLowerCase().includes(keyword);
+    const normalizedCckId = normalizeCckId(entry.cckId);
+    const name = nameByCckId[normalizedCckId] ?? normalizedCckId;
+    return name.toLowerCase().includes(keyword) || normalizedCckId.toLowerCase().includes(keyword);
   });
 
   const openAddModal = () => {
@@ -272,7 +274,7 @@ export const AdminCompetitionRoundPage = () => {
 
   const submitAdd = async () => {
     const role = addRole;
-    const cckIdToAdd = addCckId.trim();
+    const cckIdToAdd = normalizeCckId(addCckId);
     if (!cckIdToAdd) return;
 
     const runAdd = async () => {
@@ -282,7 +284,7 @@ export const AdminCompetitionRoundPage = () => {
       if (ok) setAddModalOpen(false);
     };
 
-    const isParticipant = participantSet.has(cckIdToAdd.toLowerCase());
+    const isParticipant = participantSet.has(cckIdToAdd);
     if (!isParticipant) {
       askConfirm(
         '미참가 종목 예외 배정',
@@ -410,7 +412,7 @@ export const AdminCompetitionRoundPage = () => {
                       }}
                     >
                       <span className={`player-role-badge ${entry.className}`}>{entry.label}</span>
-                      <span>{nameByCckId[entry.cckId.toLowerCase()] ?? entry.cckId}</span>
+                      <span>{nameByCckId[normalizeCckId(entry.cckId)] ?? normalizeCckId(entry.cckId)}</span>
                     </button>
                   ))
                 )}
@@ -491,7 +493,7 @@ export const AdminCompetitionRoundPage = () => {
         <div className="overlay-confirm-backdrop" role="presentation" onClick={() => setDetailEntry(null)}>
           <div className="overlay-confirm-card admin-round-detail-card" onClick={(event) => event.stopPropagation()}>
             <h3>배정 상세</h3>
-            <p>{nameByCckId[detailEntry.cckId.toLowerCase()] ?? detailEntry.cckId}</p>
+            <p>{nameByCckId[normalizeCckId(detailEntry.cckId)] ?? normalizeCckId(detailEntry.cckId)}</p>
             <div className="admin-round-detail-row">
               <span>역할</span>
               <span className={`player-role-badge ${detailEntry.className}`}>{detailEntry.label}</span>

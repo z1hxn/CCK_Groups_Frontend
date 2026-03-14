@@ -7,6 +7,7 @@ import {
   getCompetitionDetail,
 } from '@/entities/competition/api';
 import type { CompetitionDetail, ConfirmedRegistration, Round } from '@/entities/competition/types';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
 import { OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
@@ -121,9 +122,9 @@ export const AdminCompetitionAutoPage = () => {
     };
   }, [competitionId]);
 
-  const selectedSet = useMemo(() => new Set(selectedScramblers.map((item) => item.toLowerCase())), [selectedScramblers]);
+  const selectedSet = useMemo(() => new Set(selectedScramblers.map((item) => normalizeCckId(item))), [selectedScramblers]);
   const excludedSet = useMemo(
-    () => new Set(excludedAutoAssignCckIds.map((item) => item.toLowerCase())),
+    () => new Set(excludedAutoAssignCckIds.map((item) => normalizeCckId(item))),
     [excludedAutoAssignCckIds],
   );
 
@@ -132,7 +133,8 @@ export const AdminCompetitionAutoPage = () => {
       registrations
         .map((item) => ({
           ...item,
-          normalizedCckId: item.cckId.toLowerCase(),
+          cckId: normalizeCckId(item.cckId),
+          normalizedCckId: normalizeCckId(item.cckId),
           label: item.enName ? `${item.name} (${item.enName})` : item.name || item.cckId,
         }))
         .sort((a, b) => a.label.localeCompare(b.label, 'ko-KR')),
@@ -144,7 +146,7 @@ export const AdminCompetitionAutoPage = () => {
     return participantRows.filter(
       (item) =>
         item.label.toLowerCase().includes(keyword) ||
-        item.normalizedCckId.includes(keyword) ||
+        item.normalizedCckId.toLowerCase().includes(keyword) ||
         item.selectedEvents.some((eventName) => eventName.toLowerCase().includes(keyword)),
     );
   }, [participantRows, scramblerQuery]);
@@ -154,7 +156,7 @@ export const AdminCompetitionAutoPage = () => {
     return participantRows.filter(
       (item) =>
         item.label.toLowerCase().includes(keyword) ||
-        item.normalizedCckId.includes(keyword) ||
+        item.normalizedCckId.toLowerCase().includes(keyword) ||
         item.selectedEvents.some((eventName) => eventName.toLowerCase().includes(keyword)),
     );
   }, [participantRows, excludeQuery]);
@@ -388,7 +390,7 @@ export const AdminCompetitionAutoPage = () => {
                 className="admin-top-btn"
                 onClick={() =>
                   setSelectedScramblers((prev) =>
-                    [...new Set([...prev.map((item) => item.toLowerCase()), ...scramblerRows.map((item) => item.normalizedCckId)])],
+                    [...new Set([...prev.map((item) => normalizeCckId(item)), ...scramblerRows.map((item) => item.normalizedCckId)])],
                   )
                 }
               >
@@ -499,7 +501,7 @@ export const AdminCompetitionAutoPage = () => {
                 className="admin-top-btn"
                 onClick={() =>
                   setExcludedAutoAssignCckIds((prev) =>
-                    [...new Set([...prev.map((item) => item.toLowerCase()), ...exclusionRows.map((item) => item.normalizedCckId)])],
+                    [...new Set([...prev.map((item) => normalizeCckId(item)), ...exclusionRows.map((item) => item.normalizedCckId)])],
                   )
                 }
               >

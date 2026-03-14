@@ -1,5 +1,6 @@
 import { apiRequest } from '@/shared/api/client';
 import { LOGIN_URL } from '@/shared/config';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { removeAccessToken, setAccessToken } from '@/shared/auth/tokenStorage';
 
 type TokenResponse = {
@@ -36,7 +37,7 @@ export const logout = async () => {
 };
 
 export const getAuthInfoByCckId = async (cckId: string): Promise<AuthInfoResponse> => {
-  const normalizedCckId = cckId.trim().toLowerCase();
+  const normalizedCckId = normalizeCckId(cckId);
   const response = await fetch(`https://auth.cubingclub.com/api/auth/info/${encodeURIComponent(normalizedCckId)}`, {
     method: 'GET',
     headers: {
@@ -57,7 +58,7 @@ export const getAuthInfoByCckId = async (cckId: string): Promise<AuthInfoRespons
     name: String(data.name ?? ''),
     enName: String(data.enName ?? ''),
     state: String(data.state ?? ''),
-    cckId: String(data.cckId ?? normalizedCckId),
+    cckId: normalizeCckId(String(data.cckId ?? normalizedCckId)),
     wcaId: data.wcaId ? String(data.wcaId) : '',
     gender: data.gender ? String(data.gender) : '',
     position: data.position ? String(data.position) : '',

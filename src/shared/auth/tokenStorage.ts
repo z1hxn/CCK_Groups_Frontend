@@ -1,3 +1,5 @@
+import { normalizeCckId } from '@/shared/lib/cckId';
+
 const ACCESS_TOKEN_KEY = 'access_token';
 const AUTH_EVENT = 'auth-change';
 
@@ -71,7 +73,7 @@ export const getAuthUserProfile = (): AuthUserProfile | null => {
   if (!payload) return null;
 
   const name = pickString(payload, ['name', 'nickname', 'preferred_username', 'username']) ?? '사용자';
-  const cckId = pickString(payload, ['cckId', 'memberId', 'id', 'sub']) ?? '';
+  const cckId = normalizeCckId(pickString(payload, ['cckId', 'memberId', 'id', 'sub']) ?? '');
   const role = pickString(payload, ['role', 'userRole', 'memberRole']);
   const position = pickString(payload, ['position']);
 

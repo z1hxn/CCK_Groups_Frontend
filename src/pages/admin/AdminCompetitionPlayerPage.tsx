@@ -17,6 +17,7 @@ import type {
   Round,
 } from '@/entities/competition/types';
 import { getAuthInfoByCckId } from '@/features/auth/api';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
 import { OverlayConfirm, OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
@@ -45,7 +46,7 @@ const roleLimitFieldByRole: Record<PlayerRole, keyof RoundGroupConfig['groups'][
 export const AdminCompetitionPlayerPage = () => {
   const { compIdx, cckId } = useParams();
   const competitionId = Number(compIdx);
-  const playerCckId = String(cckId || '').trim();
+  const playerCckId = normalizeCckId(cckId);
 
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [assignments, setAssignments] = useState<CompetitionPlayerAssignments | null>(null);
@@ -80,7 +81,7 @@ export const AdminCompetitionPlayerPage = () => {
 
     setCompetition(competitionResult);
     setAssignments(assignmentResult);
-    const registration = registrationResult.find((item) => item.cckId.toLowerCase() === playerCckId.toLowerCase());
+    const registration = registrationResult.find((item) => normalizeCckId(item.cckId) === playerCckId);
     setSelectedEvents(Array.isArray(registration?.selectedEvents) ? registration.selectedEvents : []);
 
     const rounds = (competitionResult?.rounds ?? []).sort(

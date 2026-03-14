@@ -6,6 +6,7 @@ import {
   getCompetitionRoundsByDay,
 } from '@/entities/competition/api';
 import { getAuthInfoByCckId } from '@/features/auth/api';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import type {
   CompetitionDetail,
   CompetitionPlayerAssignments,
@@ -80,7 +81,7 @@ const dedupeRounds = (rounds: Round[]) => {
 export const CompetitionPlayerPage = () => {
   const { compIdx, cckId } = useParams();
   const competitionId = Number(compIdx);
-  const playerId = String(cckId || '').trim();
+  const playerId = normalizeCckId(cckId);
 
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [timelineRounds, setTimelineRounds] = useState<Round[]>([]);
@@ -233,7 +234,7 @@ export const CompetitionPlayerPage = () => {
         actions={[
           {
             label: '선수 정보',
-            href: `https://ranking.cubingclub.com/profile/${cckId}`,
+            href: `https://ranking.cubingclub.com/profile/${playerId}`,
             iconSrc: '/icon/button/person.svg',
           },
           {

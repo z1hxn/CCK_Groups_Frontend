@@ -1,4 +1,5 @@
 import { apiRequest } from '@/shared/api/client';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import type {
   Competition,
   CompetitionDetail,
@@ -103,7 +104,10 @@ export const getCompetitionPlayerAssignments = async (
   competitionId: number,
   cckId: string,
 ): Promise<CompetitionPlayerAssignments> => {
-  return apiRequest<CompetitionPlayerAssignments>(`/competition/${competitionId}/player/${encodeURIComponent(cckId)}`);
+  const normalizedCckId = normalizeCckId(cckId);
+  return apiRequest<CompetitionPlayerAssignments>(
+    `/competition/${competitionId}/player/${encodeURIComponent(normalizedCckId)}`,
+  );
 };
 
 export const getCompetitionRoundAssignments = async (roundIdx: number): Promise<CompetitionRoundAssignments> => {
@@ -114,6 +118,10 @@ export const updateCompetitionPlayerAssignment = async (
   competitionId: number,
   payload: UpdatePlayerAssignmentRequest,
 ): Promise<void> => {
+  const normalizedPayload: UpdatePlayerAssignmentRequest = {
+    ...payload,
+    cckId: normalizeCckId(payload.cckId),
+  };
   const candidatePaths = [
     `/admin/competition/${competitionId}/player-assignment`,
     `/admin/competitions/${competitionId}/player-assignment`,
@@ -124,7 +132,7 @@ export const updateCompetitionPlayerAssignment = async (
     try {
       await apiRequest(path, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(normalizedPayload),
       });
       return;
     } catch (error) {
@@ -212,14 +220,14 @@ export const autoAssignCompetition = async (
         method: 'POST',
         body: JSON.stringify({
           confirmCompetitionName: payload.confirmCompetitionName,
-          scramblerCandidateCckIds: payload.scramblerCandidateCckIds,
-          scramblerCckIds: payload.scramblerCandidateCckIds,
-          excludedCckIds: payload.excludedCckIds,
+          scramblerCandidateCckIds: payload.scramblerCandidateCckIds.map((item) => normalizeCckId(item)),
+          scramblerCckIds: payload.scramblerCandidateCckIds.map((item) => normalizeCckId(item)),
+          excludedCckIds: payload.excludedCckIds.map((item) => normalizeCckId(item)),
           scrambler: {
-            candidateCckIds: payload.scramblerCandidateCckIds,
+            candidateCckIds: payload.scramblerCandidateCckIds.map((item) => normalizeCckId(item)),
           },
           exclusion: {
-            cckIds: payload.excludedCckIds,
+            cckIds: payload.excludedCckIds.map((item) => normalizeCckId(item)),
           },
         }),
       });

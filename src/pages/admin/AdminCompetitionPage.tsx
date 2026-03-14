@@ -6,6 +6,7 @@ import {
   resetCompetitionAssignments,
 } from '@/entities/competition/api';
 import type { CompetitionDetail, ConfirmedRegistration } from '@/entities/competition/types';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
 import { OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
@@ -71,7 +72,7 @@ export const AdminCompetitionPage = () => {
           if (!keyword) return true;
           return (
             item.label.toLowerCase().includes(keyword) ||
-            item.cckId.toLowerCase().includes(keyword) ||
+            normalizeCckId(item.cckId).toLowerCase().includes(keyword) ||
             item.name.toLowerCase().includes(keyword) ||
             item.enName.toLowerCase().includes(keyword)
           );

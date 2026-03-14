@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getCompetitionConfirmedRegistrations, getCompetitionDetail } from '@/entities/competition/api';
 import type { CompetitionDetail, ConfirmedRegistration } from '@/entities/competition/types';
+import { normalizeCckId } from '@/shared/lib/cckId';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader.tsx';
 
 const formatDate = (date: Date) => {
@@ -87,7 +88,7 @@ export const CompetitionPage = () => {
         return (
           item.name.toLowerCase().includes(normalizedQuery) ||
           item.enName.toLowerCase().includes(normalizedQuery) ||
-          item.cckId.toLowerCase().includes(normalizedQuery)
+          normalizeCckId(item.cckId).toLowerCase().includes(normalizedQuery)
         );
       }),
     [registrations, normalizedQuery],
