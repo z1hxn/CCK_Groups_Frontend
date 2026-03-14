@@ -139,7 +139,7 @@ export const CompetitionPage = () => {
           },
           {
             label: 'Payment 대회 페이지',
-            href: `https://payment.cubingclub.com/competition/${competitionId}`,
+            href: `https://payment.cubingclub.com/competitions/${competitionId}`,
             iconSrc: '/icon/button/payment.svg',
           },
         ]}

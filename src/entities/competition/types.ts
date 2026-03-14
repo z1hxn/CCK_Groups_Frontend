@@ -43,7 +43,7 @@ export type RoundDayCount = {
   future: Round[];
 };
 
-export type PlayerRole = 'competition' | 'judge' | 'runner' | 'scrambler';
+export type PlayerRole = 'competitor' | 'judge' | 'runner' | 'scrambler';
 
 export type PlayerRoundInfo = {
   idx: number;
@@ -67,7 +67,7 @@ export type PlayerGroupAssignment = {
 export type CompetitionPlayerAssignments = {
   compIdx: number;
   cckId: string;
-  competition: PlayerGroupAssignment[];
+  competitor: PlayerGroupAssignment[];
   judge: PlayerGroupAssignment[];
   runner: PlayerGroupAssignment[];
   scrambler: PlayerGroupAssignment[];
@@ -75,7 +75,7 @@ export type CompetitionPlayerAssignments = {
 
 export type RoundGroupAssignments = {
   group: string;
-  competition: PlayerGroupAssignment[];
+  competitor: PlayerGroupAssignment[];
   judge: PlayerGroupAssignment[];
   runner: PlayerGroupAssignment[];
   scrambler: PlayerGroupAssignment[];
@@ -84,7 +84,7 @@ export type RoundGroupAssignments = {
 export type CompetitionRoundAssignments = {
   roundIdx: number;
   round: PlayerRoundInfo | null;
-  competition: PlayerGroupAssignment[];
+  competitor: PlayerGroupAssignment[];
   judge: PlayerGroupAssignment[];
   runner: PlayerGroupAssignment[];
   scrambler: PlayerGroupAssignment[];

@@ -39,13 +39,13 @@ type TimelineRenderGroup = {
 };
 
 const roleMeta: Record<PlayerRole, { label: string; className: string }> = {
-  competition: { label: '선수', className: 'role-player' },
+  competitor: { label: '선수', className: 'role-player' },
   judge: { label: '심판', className: 'role-judge' },
   runner: { label: '러너', className: 'role-runner' },
   scrambler: { label: '스크램블러', className: 'role-scrambler' },
 };
 const roleOrder: Record<PlayerRole, number> = {
-  competition: 1,
+  competitor: 1,
   judge: 2,
   runner: 3,
   scrambler: 4,
@@ -170,7 +170,7 @@ export const CompetitionPlayerPage = () => {
       }
     };
 
-    pushEntries('competition', assignments.competition);
+    pushEntries('competitor', assignments.competitor);
     pushEntries('judge', assignments.judge);
     pushEntries('runner', assignments.runner);
     pushEntries('scrambler', assignments.scrambler);

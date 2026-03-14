@@ -602,7 +602,7 @@ export const AdminCompetitionAutoPage = () => {
             <div className="admin-auto-result-grid">
               <div className="admin-auto-result-card">
                 <strong>출전</strong>
-                <span>{result.inserted.competition}</span>
+                <span>{result.inserted.competitor}</span>
               </div>
               <div className="admin-auto-result-card">
                 <strong>스크램블러</strong>

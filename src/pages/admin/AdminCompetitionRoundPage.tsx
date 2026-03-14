@@ -34,7 +34,7 @@ type RoleEntry = {
 };
 
 const roleItems: RoleItem[] = [
-  { role: 'competition', label: '출전', className: 'role-player' },
+  { role: 'competitor', label: '출전', className: 'role-player' },
   { role: 'judge', label: '심판', className: 'role-judge' },
   { role: 'runner', label: '러너', className: 'role-runner' },
   { role: 'scrambler', label: '스크램블러', className: 'role-scrambler' },
@@ -44,7 +44,7 @@ const toUniqueSortedGroups = (groups: string[]) => [...new Set(groups)].sort((a,
 const normalizeGroupName = (value: string) => String(value || '').trim();
 const normalizeEventName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '');
 const roleLimitFieldByRole: Record<PlayerRole, keyof RoundGroupConfig['groups'][number]> = {
-  competition: 'playerCount',
+  competitor: 'playerCount',
   judge: 'judgeCount',
   runner: 'runnerCount',
   scrambler: 'scramblerCount',
@@ -63,7 +63,7 @@ export const AdminCompetitionRoundPage = () => {
   const [activeRole, setActiveRole] = useState<ViewRole>('all');
   const [query, setQuery] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addRole, setAddRole] = useState<PlayerRole>('competition');
+  const [addRole, setAddRole] = useState<PlayerRole>('competitor');
   const [addCckId, setAddCckId] = useState('');
   const [detailEntry, setDetailEntry] = useState<RoleEntry | null>(null);
   const [detailTargetGroup, setDetailTargetGroup] = useState('');
@@ -199,7 +199,7 @@ export const AdminCompetitionRoundPage = () => {
     );
     const projectedCount = currentAssignedCount + (alreadyAssigned ? 0 : 1);
     if (projectedCount <= roleLimit) return { blocked: false, warn: false, roleLimit };
-    if (role === 'competition') return { blocked: true, warn: false, roleLimit };
+    if (role === 'competitor') return { blocked: true, warn: false, roleLimit };
     return { blocked: false, warn: true, roleLimit };
   };
 
@@ -264,7 +264,7 @@ export const AdminCompetitionRoundPage = () => {
   });
 
   const openAddModal = () => {
-    const defaultRole = activeRole === 'all' ? 'competition' : activeRole;
+    const defaultRole = activeRole === 'all' ? 'competitor' : activeRole;
     setAddRole(defaultRole);
     setAddCckId('');
     setAddModalOpen(true);
@@ -277,7 +277,7 @@ export const AdminCompetitionRoundPage = () => {
 
     const runAdd = async () => {
       const currentGroups = getCurrentRoleGroups(role, cckIdToAdd);
-      const nextGroups = role === 'competition' ? [activeGroup] : toUniqueSortedGroups([...currentGroups, activeGroup]);
+      const nextGroups = role === 'competitor' ? [activeGroup] : toUniqueSortedGroups([...currentGroups, activeGroup]);
       const ok = await updateRoleGroups(role, cckIdToAdd, nextGroups, `add-${activeGroup}-${role}`);
       if (ok) setAddModalOpen(false);
     };
@@ -286,7 +286,7 @@ export const AdminCompetitionRoundPage = () => {
     if (!isParticipant) {
       askConfirm(
         '미참가 종목 예외 배정',
-        role === 'competition'
+        role === 'competitor'
           ? '이 선수는 해당 종목 미참가입니다. 즉석 신청/예외 출전으로 배정할까요?'
           : '이 선수는 해당 종목 미참가입니다. 스탭으로 예외 배정할까요?',
         () => void runAdd(),
@@ -520,7 +520,7 @@ export const AdminCompetitionRoundPage = () => {
                   const runMove = async () => {
                     const currentGroups = getCurrentRoleGroups(detailEntry.role, detailEntry.cckId);
                     const nextGroups =
-                      detailEntry.role === 'competition'
+                      detailEntry.role === 'competitor'
                         ? [detailTargetGroup]
                         : toUniqueSortedGroups([
                             ...currentGroups.filter((item) => item !== normalizeGroupName(detailEntry.group)),

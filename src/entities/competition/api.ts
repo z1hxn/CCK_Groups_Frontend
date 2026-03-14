@@ -16,7 +16,7 @@ type RoundDayResponse = { data: RoundDayCount };
 type ConfirmedRegistrationResponse = { data: ConfirmedRegistration[] };
 type UpdatePlayerAssignmentRequest = {
   cckId: string;
-  role: 'competition' | 'judge' | 'runner' | 'scrambler';
+  role: 'competitor' | 'judge' | 'runner' | 'scrambler';
   roundIdx: number;
   groups: string[];
 };
@@ -57,7 +57,7 @@ type AutoAssignResponse = {
       adminFallbackUsed?: boolean;
     }>;
     inserted: {
-      competition: number;
+      competitor: number;
       scrambler: number;
       runner: number;
       judge: number;

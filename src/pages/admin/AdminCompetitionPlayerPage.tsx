@@ -24,7 +24,7 @@ import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 type RoleMeta = { role: PlayerRole; label: string; singleSelect: boolean };
 
 const roleItems: RoleMeta[] = [
-  { role: 'competition', label: '출전', singleSelect: true },
+  { role: 'competitor', label: '출전', singleSelect: true },
   { role: 'judge', label: '심판', singleSelect: false },
   { role: 'runner', label: '러너', singleSelect: false },
   { role: 'scrambler', label: '스크램블러', singleSelect: false },
@@ -36,7 +36,7 @@ const toUniqueSortedGroups = (groups: string[]) => [...new Set(groups)].sort((a,
 const normalizeEventName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '');
 const normalizeGroupName = (value: string) => String(value || '').trim();
 const roleLimitFieldByRole: Record<PlayerRole, keyof RoundGroupConfig['groups'][number]> = {
-  competition: 'playerCount',
+  competitor: 'playerCount',
   judge: 'judgeCount',
   runner: 'runnerCount',
   scrambler: 'scramblerCount',
@@ -329,7 +329,7 @@ export const AdminCompetitionPlayerPage = () => {
                                           };
 
                                           if (!checked && roleLimit > 0 && projectedCount > roleLimit) {
-                                            if (roleItem.role === 'competition') {
+                                            if (roleItem.role === 'competitor') {
                                               setToast({
                                                 open: true,
                                                 variant: 'error',
@@ -400,7 +400,7 @@ export const AdminCompetitionPlayerPage = () => {
                         const projectedCount = currentAssignedCount + (alreadyAssigned ? 0 : 1);
                         if (projectedCount <= roleLimit) continue;
 
-                        if (roleItem.role === 'competition') {
+                        if (roleItem.role === 'competitor') {
                           overLimitCompetitionMessages.push(
                             `${round.eventName} ${round.roundName} ${groupName}조 출전 정원(${roleLimit}) 초과`,
                           );

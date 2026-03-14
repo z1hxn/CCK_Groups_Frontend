@@ -16,7 +16,7 @@ type RoleItem = {
 type ViewRole = PlayerRole | 'all';
 
 const roleItems: RoleItem[] = [
-  { role: 'competition', label: '출전', className: 'role-player' },
+  { role: 'competitor', label: '출전', className: 'role-player' },
   { role: 'judge', label: '심판', className: 'role-judge' },
   { role: 'runner', label: '러너', className: 'role-runner' },
   { role: 'scrambler', label: '스크램블러', className: 'role-scrambler' },
