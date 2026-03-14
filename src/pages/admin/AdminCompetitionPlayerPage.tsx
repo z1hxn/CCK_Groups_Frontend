@@ -179,7 +179,7 @@ export const AdminCompetitionPlayerPage = () => {
         actions={[
           {
             label: '선수 목록',
-            to: `/admin/competition/${competitionId}`,
+            to: `/admin/competition/${competitionId}?view=player`,
             iconSrc: '/icon/button/back.svg',
           },
         ]}

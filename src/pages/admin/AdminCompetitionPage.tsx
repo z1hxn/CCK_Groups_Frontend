@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   getCompetitionConfirmedRegistrations,
   getCompetitionDetail,
@@ -14,10 +14,12 @@ export const AdminCompetitionPage = () => {
   const navigate = useNavigate();
   const { compIdx } = useParams();
   const competitionId = Number(compIdx);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialView = searchParams.get('view') === 'round' ? 'round' : 'player';
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [registrations, setRegistrations] = useState<ConfirmedRegistration[]>([]);
   const [query, setQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'player' | 'round'>('player');
+  const [viewMode, setViewMode] = useState<'player' | 'round'>(initialView);
   const [loading, setLoading] = useState(true);
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetStep, setResetStep] = useState<'warning' | 'typing'>('warning');
@@ -78,6 +80,17 @@ export const AdminCompetitionPage = () => {
     [registrations, query],
   );
 
+  useEffect(() => {
+    const queryView = searchParams.get('view');
+    if (queryView === 'round' && viewMode !== 'round') setViewMode('round');
+    if (queryView !== 'round' && viewMode !== 'player') setViewMode('player');
+  }, [searchParams, viewMode]);
+
+  const updateViewMode = (next: 'player' | 'round') => {
+    setViewMode(next);
+    setSearchParams(next === 'round' ? { view: 'round' } : {});
+  };
+
   if (!isAdminByToken()) return <div className="empty-state">403 Forbidden</div>;
   if (loading) return <div className="empty-state">관리자 페이지 로딩 중...</div>;
   if (!competition) return <div className="empty-state">대회 정보를 불러올 수 없습니다.</div>;
@@ -112,14 +125,14 @@ export const AdminCompetitionPage = () => {
             <button
               type="button"
               className={`comp-view-tab ${viewMode === 'player' ? 'active' : ''}`}
-              onClick={() => setViewMode('player')}
+              onClick={() => updateViewMode('player')}
             >
               선수별 관리
             </button>
             <button
               type="button"
               className={`comp-view-tab ${viewMode === 'round' ? 'active' : ''}`}
-              onClick={() => setViewMode('round')}
+              onClick={() => updateViewMode('round')}
             >
               라운드 관리
             </button>

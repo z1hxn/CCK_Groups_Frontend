@@ -329,7 +329,7 @@ export const AdminCompetitionRoundPage = () => {
         actions={[
           {
             label: '대회 관리',
-            to: `/admin/competition/${competitionId}`,
+            to: `/admin/competition/${competitionId}?view=round`,
             iconSrc: '/icon/button/back.svg',
           },
         ]}
