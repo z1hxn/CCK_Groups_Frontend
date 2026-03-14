@@ -100,34 +100,38 @@ export const AdminCompetitionPage = () => {
               className={`comp-view-tab ${viewMode === 'player' ? 'active' : ''}`}
               onClick={() => setViewMode('player')}
             >
-              선수별 조 편집
+              사람별 관리
             </button>
             <button
               type="button"
               className={`comp-view-tab ${viewMode === 'round' ? 'active' : ''}`}
               onClick={() => setViewMode('round')}
             >
-              라운드별 조 편집
+              라운드 관리
             </button>
           </div>
 
           <div className="admin-top-actions">
-          <button
-            type="button"
-            className="admin-top-btn"
-            onClick={() => navigate(`/admin/competition/${competitionId}/groups`)}
-          >
-            조 설정
-          </button>
-          <button type="button" className="admin-top-btn" onClick={() => navigate(`/admin/competition/${competitionId}/auto`)}>
-            자동 조편성
-          </button>
-        </div>
+            <button
+              type="button"
+              className="admin-top-btn"
+              onClick={() => navigate(`/admin/competition/${competitionId}/groups`)}
+            >
+              조 설정
+            </button>
+            <button
+              type="button"
+              className="admin-top-btn"
+              onClick={() => navigate(`/admin/competition/${competitionId}/auto`)}
+            >
+              자동 조편성
+            </button>
+          </div>
         </div>
 
         {viewMode === 'player' ? (
           <section className="admin-panel">
-            <h3>선수별 조 편집</h3>
+            <h3>사람별 조 편집</h3>
             <div className="admin-player-picker">
               <input
                 value={query}
@@ -180,7 +184,7 @@ export const AdminCompetitionPage = () => {
           </section>
         ) : (
           <section className="admin-panel">
-            <h3>라운드별 조 편집</h3>
+            <h3>라운드 목록</h3>
             <div className="registration-list">
               {competition.rounds.length === 0 ? (
                 <div className="card-list-empty">라운드가 없습니다.</div>
@@ -197,7 +201,7 @@ export const AdminCompetitionPage = () => {
                         <strong>
                           {round.eventName} {round.roundName}
                         </strong>
-                        <span>라운드 인원/역할 편집</span>
+                        <span>조별 출전/심판/러너/스크 관리</span>
                       </div>
                     </Link>
                   ))

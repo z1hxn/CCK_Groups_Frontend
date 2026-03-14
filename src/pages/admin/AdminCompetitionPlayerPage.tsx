@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   getAdminRoundGroupConfig,
@@ -18,7 +18,7 @@ import type {
 } from '@/entities/competition/types';
 import { getAuthInfoByCckId } from '@/features/auth/api';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
-import { OverlayToast } from '@/widgets/overlay';
+import { OverlayConfirm, OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 type RoleMeta = { role: PlayerRole; label: string; singleSelect: boolean };
@@ -52,15 +52,22 @@ export const AdminCompetitionPlayerPage = () => {
   const [roundAssignmentMap, setRoundAssignmentMap] = useState<Record<number, CompetitionRoundAssignments>>({});
   const [roundConfigMap, setRoundConfigMap] = useState<Record<number, RoundGroupConfig>>({});
   const [selectedGroupsByKey, setSelectedGroupsByKey] = useState<Record<string, string[]>>({});
+  const [forcedOpenByRound, setForcedOpenByRound] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [playerName, setPlayerName] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: '',
+    message: '',
+  });
   const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
     variant: 'info',
   });
+  const confirmActionRef = useRef<null | (() => void)>(null);
 
   const loadData = async () => {
     if (!Number.isFinite(competitionId) || !playerCckId) return;
@@ -152,6 +159,11 @@ export const AdminCompetitionPlayerPage = () => {
   if (!competition) return <div className="empty-state">대회 정보를 불러올 수 없습니다.</div>;
   if (!assignments) return <div className="empty-state">선수 배정 정보를 불러올 수 없습니다.</div>;
 
+  const askConfirm = (title: string, message: string, action: () => void) => {
+    confirmActionRef.current = action;
+    setConfirm({ open: true, title, message });
+  };
+
   return (
     <div className="comp-page">
       <PageHeader
@@ -189,26 +201,49 @@ export const AdminCompetitionPlayerPage = () => {
               const groupNames = toUniqueSortedGroups([...groupNamesFromRound, ...selectedFromAllRoles]);
               const isParticipating =
                 selectedEventSet.size === 0 || selectedEventSet.has(normalizeEventName(round.eventName));
-              const isOpen = isParticipating;
+              const isForcedOpen = Boolean(forcedOpenByRound[round.id]);
+              const canEditRound = isParticipating || isForcedOpen;
+              const isOpen = canEditRound;
 
               return (
                 <div
-                  className={`admin-assignment-row ${!isParticipating ? 'admin-assignment-row-inactive' : ''}`}
+                  className={`admin-assignment-row ${!canEditRound ? 'admin-assignment-row-inactive' : ''}`}
                   key={round.id}
                 >
-                  <div className="admin-round-toggle admin-round-toggle-static">
-                    <strong className={!isParticipating ? 'admin-round-title-strike' : ''}>
+                  <button
+                    type="button"
+                    className="admin-round-toggle"
+                    onClick={() => {
+                      if (canEditRound) return;
+                      askConfirm(
+                        '미참가 종목 예외 배정',
+                        `${round.eventName} ${round.roundName}은 미참가 종목입니다. 경고를 확인하고 예외 배정을 열까요?`,
+                        () =>
+                          setForcedOpenByRound((prev) => ({
+                            ...prev,
+                            [round.id]: true,
+                          })),
+                      );
+                    }}
+                  >
+                    <strong className={!canEditRound ? 'admin-round-title-strike' : ''}>
                       {round.eventName} {round.roundName}
                     </strong>
-                    <span>{isParticipating ? '참가 종목' : '미참가 종목'}</span>
-                  </div>
+                    <span>
+                      {isParticipating
+                        ? '참가 종목'
+                        : canEditRound
+                          ? '예외 배정 모드'
+                          : '미참가 종목 · 클릭하여 예외 배정'}
+                    </span>
+                  </button>
 
                   {isOpen ? (
                     <div className="admin-assignment-roles admin-assignment-roles--check">
                       {roleItems.map((roleItem) => {
                         const key = makeFieldKey(round.id, roleItem.role);
                         const selected = selectedGroupsByKey[key] ?? [];
-                        const disabledByEvent = !isParticipating;
+                        const disabledByEvent = !canEditRound;
 
                         return (
                           <div
@@ -425,6 +460,23 @@ export const AdminCompetitionPlayerPage = () => {
         </section>
       </div>
 
+      <OverlayConfirm
+        open={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        confirmLabel="열기"
+        cancelLabel="취소"
+        onCancel={() => {
+          confirmActionRef.current = null;
+          setConfirm((prev) => ({ ...prev, open: false }));
+        }}
+        onConfirm={() => {
+          const action = confirmActionRef.current;
+          confirmActionRef.current = null;
+          setConfirm((prev) => ({ ...prev, open: false }));
+          action?.();
+        }}
+      />
       <OverlayToast
         open={toast.open}
         message={toast.message}
