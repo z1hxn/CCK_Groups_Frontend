@@ -224,6 +224,15 @@ export const AdminCompetitionAutoPage = () => {
       });
       return;
     }
+    if (selectedScramblers.length === 0) {
+      setStep(2);
+      setToast({
+        open: true,
+        variant: 'error',
+        message: '스크램블러 후보가 0명입니다. 2단계에서 최소 1명 이상 선택해 주세요.',
+      });
+      return;
+    }
     const confirmed = window.confirm(
       '자동 조편성을 실행하면 현재 대회의 기존 배정 데이터가 삭제되고 새로 생성됩니다. 계속할까요?',
     );
@@ -239,6 +248,14 @@ export const AdminCompetitionAutoPage = () => {
       });
       setResult(response);
       setStep(5);
+      if ((response.requestInfo?.scramblerCandidateCount ?? 0) === 0 && selectedScramblers.length > 0) {
+        setToast({
+          open: true,
+          variant: 'error',
+          message: '서버가 스크램블러 후보를 0명으로 인식했습니다. 백엔드 재시작 후 다시 시도해 주세요.',
+        });
+        return;
+      }
       setToast({ open: true, variant: 'success', message: '자동 조편성이 완료되었습니다.' });
     } catch (error) {
       setStep(3);
@@ -442,12 +459,22 @@ export const AdminCompetitionAutoPage = () => {
             <strong>선택된 Scrambler 후보</strong>
             <span>{selectedScramblers.length}명</span>
           </div>
+          {selectedScramblers.length === 0 ? (
+            <div className="admin-warning-box">
+              <span>스크램블러 후보가 0명이면 자동조편성 시 스크램블러는 배정되지 않습니다.</span>
+            </div>
+          ) : null}
 
           <div className="admin-round-detail-actions">
             <button type="button" className="admin-top-btn" disabled={executing} onClick={() => setStep(1)}>
               이전 단계
             </button>
-            <button type="button" className="admin-save-all-btn" disabled={executing} onClick={() => setStep(3)}>
+            <button
+              type="button"
+              className="admin-save-all-btn"
+              disabled={executing || selectedScramblers.length === 0}
+              onClick={() => setStep(3)}
+            >
               다음 단계
             </button>
           </div>
@@ -589,6 +616,11 @@ export const AdminCompetitionAutoPage = () => {
                 <strong>심판</strong>
                 <span>{result.inserted.judge}</span>
               </div>
+            </div>
+
+            <div className="admin-placeholder">
+              <strong>실행 시 사용된 스크램블러 후보</strong>
+              <span>{result.requestInfo?.scramblerCandidateCount ?? selectedScramblers.length}명</span>
             </div>
 
             {deficitRoundsFromResult.length > 0 ? (

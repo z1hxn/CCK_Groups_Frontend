@@ -34,6 +34,10 @@ type AutoAssignResponse = {
   data: {
     compIdx: number;
     competitionName: string;
+    requestInfo?: {
+      scramblerCandidateCount: number;
+      excludedRunnerJudgeCount: number;
+    };
     rounds: Array<{
       roundIdx: number;
       eventName: string;
@@ -211,6 +215,9 @@ export const autoAssignCompetition = async (
         method: 'POST',
         body: JSON.stringify({
           confirmCompetitionName: payload.confirmCompetitionName,
+          scramblerCandidateCckIds: payload.scramblerCandidateCckIds,
+          scramblerCckIds: payload.scramblerCandidateCckIds,
+          excludedCckIds: payload.excludedCckIds,
           scrambler: {
             candidateCckIds: payload.scramblerCandidateCckIds,
           },
