@@ -11,7 +11,7 @@ type RefreshResponse = {
 
 const normalizePath = (requestPath: string): string => {
   if (requestPath.startsWith('http://') || requestPath.startsWith('https://')) return requestPath;
-  const base = (API_URL || '/api').replace(/\/$/, '');
+  const base = (API_URL || '/api/v1').replace(/\/$/, '');
   const endpoint = requestPath.startsWith('/') ? requestPath : `/${requestPath}`;
   return `${base}${endpoint}`;
 };

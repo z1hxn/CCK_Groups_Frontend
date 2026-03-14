@@ -1,5 +1,5 @@
 export const env = {
-  API_URL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api',
+  API_URL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api/v1',
   SSO_URL: import.meta.env.VITE_SSO_URL ?? 'http://localhost:8081',
   LOGIN_URL: import.meta.env.VITE_LOGIN_URL ?? 'http://localhost:8081/login',
 } as const;

@@ -103,11 +103,11 @@ export const getCompetitionPlayerAssignments = async (
   competitionId: number,
   cckId: string,
 ): Promise<CompetitionPlayerAssignments> => {
-  return apiRequest<CompetitionPlayerAssignments>(`/v1/competition/${competitionId}/player/${encodeURIComponent(cckId)}`);
+  return apiRequest<CompetitionPlayerAssignments>(`/competition/${competitionId}/player/${encodeURIComponent(cckId)}`);
 };
 
 export const getCompetitionRoundAssignments = async (roundIdx: number): Promise<CompetitionRoundAssignments> => {
-  return apiRequest<CompetitionRoundAssignments>(`/v1/round/${roundIdx}`);
+  return apiRequest<CompetitionRoundAssignments>(`/round/${roundIdx}`);
 };
 
 export const updateCompetitionPlayerAssignment = async (
@@ -117,7 +117,6 @@ export const updateCompetitionPlayerAssignment = async (
   const candidatePaths = [
     `/admin/competition/${competitionId}/player-assignment`,
     `/admin/competitions/${competitionId}/player-assignment`,
-    `/v1/admin/competition/${competitionId}/player-assignment`,
   ];
 
   let lastError: unknown = null;
@@ -175,7 +174,6 @@ export const resetCompetitionAssignments = async (
   const candidatePaths = [
     `/admin/competition/${competitionId}/reset-assignments`,
     `/admin/competitions/${competitionId}/reset-assignments`,
-    `/v1/admin/competition/${competitionId}/reset-assignments`,
   ];
 
   let lastError: unknown = null;
@@ -205,7 +203,6 @@ export const autoAssignCompetition = async (
   const candidatePaths = [
     `/admin/competition/${competitionId}/auto-assign`,
     `/admin/competitions/${competitionId}/auto-assign`,
-    `/v1/admin/competition/${competitionId}/auto-assign`,
   ];
 
   let lastError: unknown = null;
