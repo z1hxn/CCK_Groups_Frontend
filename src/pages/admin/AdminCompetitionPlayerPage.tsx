@@ -178,7 +178,7 @@ export const AdminCompetitionPlayerPage = () => {
         }
         actions={[
           {
-            label: '사람 목록',
+            label: '선수 목록',
             to: `/admin/competition/${competitionId}`,
             iconSrc: '/icon/button/back.svg',
           },

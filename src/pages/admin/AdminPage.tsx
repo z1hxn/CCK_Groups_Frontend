@@ -51,7 +51,7 @@ export const AdminPage = () => {
     <div className="comp-page">
       <PageHeader
         containerClassName="comp-header"
-        title="관리자 페이지"
+        title="조편성 관리"
         subtitle={
           <>
             <span>Group Admin Page</span>

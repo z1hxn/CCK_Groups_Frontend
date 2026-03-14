@@ -871,7 +871,7 @@
   justify-content: center;
   border-radius: 8px;
   min-height: 28px;
-  min-width: 64px;
+  min-width: 0;
   font-size: 12px;
   line-height: 1;
   font-weight: 700;
@@ -941,13 +941,6 @@
   gap: 8px;
 }
 
-.public-round-group-tabs {
-  background: #e8ebf2;
-  border-radius: 14px;
-  padding: 6px;
-  width: fit-content;
-}
-
 .round-group-tab {
   min-height: 36px;
   border: 1px solid #dbe1f0;
@@ -960,24 +953,10 @@
   cursor: pointer;
 }
 
-.public-round-group-tab {
-  min-height: 40px;
-  border-radius: 12px;
-  border: 1px solid #cfd7e6;
-  background: #edf1f8;
-  color: #475569;
-}
-
 .round-group-tab.active {
   border-color: #111111;
   background: #111111;
   color: #ffffff;
-}
-
-.public-round-group-tab.active {
-  border-color: #bdc9df;
-  background: #d7deec;
-  color: #233047;
 }
 
 .round-group-card {
@@ -1111,11 +1090,11 @@
 
 .round-role-tab {
   min-height: 34px;
-  border: 1px solid #dbe1f0;
-  border-radius: 999px;
+  border: 1px solid #d9deeb;
+  border-radius: 10px;
   padding: 0 12px;
-  background: #f8faff;
-  color: #334155;
+  background: #f8f9ff;
+  color: #3a3f55;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -1125,9 +1104,37 @@
 }
 
 .round-role-tab.active {
-  border-color: #111111;
-  background: #111111;
-  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.18);
+}
+
+.round-role-tab.role-all {
+  border-color: #d0d7e6;
+  background: #e3e8f3;
+  color: #334155;
+}
+
+.round-role-tab.role-player {
+  border-color: #b4d6ec;
+  background: #bfe1f6;
+  color: #0a53a8;
+}
+
+.round-role-tab.role-judge {
+  border-color: #c2e0a6;
+  background: #d4edbc;
+  color: #11734b;
+}
+
+.round-role-tab.role-runner {
+  border-color: #f2d98a;
+  background: #ffe5a0;
+  color: #473821;
+}
+
+.round-role-tab.role-scrambler {
+  border-color: #f2bcb5;
+  background: #ffcfc9;
+  color: #b10202;
 }
 
 .round-role-search {
@@ -1141,6 +1148,18 @@
   border-radius: 10px;
   padding: 8px 10px;
   background: #ffffff;
+}
+
+.round-role-tools {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-right: 12px;
+}
+
+.round-role-tools .round-role-search {
+  flex: 1;
 }
 
 .round-role-list {
@@ -1167,6 +1186,72 @@
 .round-role-list-item:hover {
   border-color: #c4d0ee;
   color: #2f5fc3;
+}
+
+.admin-round-role-list-item {
+  text-align: left;
+  border: 1px solid #dbe1f0;
+  cursor: pointer;
+  background: #ffffff;
+}
+
+.admin-round-role-list-item span:last-child {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.admin-round-detail-card {
+  width: min(460px, 100%);
+}
+
+.admin-round-add-card {
+  width: min(460px, 100%);
+}
+
+.admin-reset-modal-card {
+  width: min(520px, 100%);
+}
+
+.admin-round-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-round-detail-row span:first-child {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-round-detail-row select {
+  min-height: 34px;
+  border: 1px solid #dbe1f0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #ffffff;
+}
+
+.admin-round-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-reset-warning-text {
+  color: #9f2424;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.admin-reset-confirm-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #e3bcbc;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #ffffff;
 }
 
 .admin-competition-list {
@@ -1254,6 +1339,18 @@
 
 .admin-top-btn:disabled {
   opacity: 0.45;
+}
+
+.admin-top-btn-danger {
+  border-color: #f1c4c4;
+  background: #fff1f1;
+  color: #b42318;
+}
+
+.admin-top-btn-danger:hover {
+  border-color: #e8a3a3;
+  background: #ffe5e5;
+  color: #9e1f1f;
 }
 
 .admin-placeholder {

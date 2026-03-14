@@ -118,16 +118,17 @@ export const CompetitionRoundPage = () => {
           )
         : [],
   }));
+  const allEntries = rowsByRole.flatMap(({ roleItem, rows }) =>
+    rows.map((assignment) => ({
+      assignment,
+      role: roleItem.role,
+      label: roleItem.label,
+      className: roleItem.className,
+    })),
+  );
   const rowEntries =
     activeRole === 'all'
-      ? rowsByRole.flatMap(({ roleItem, rows }) =>
-          rows.map((assignment) => ({
-            assignment,
-            role: roleItem.role,
-            label: roleItem.label,
-            className: roleItem.className,
-          })),
-        )
+      ? allEntries
       : rowsByRole
           .filter(({ roleItem }) => roleItem.role === activeRole)
           .flatMap(({ roleItem, rows }) =>
@@ -175,12 +176,12 @@ export const CompetitionRoundPage = () => {
           <div className="empty-state">이 라운드에 배정된 조 정보가 없습니다.</div>
         ) : (
           <div className="round-group-manage-wrap">
-            <div className="round-group-tabs public-round-group-tabs">
+            <div className="comp-view-tabs">
               {groupNames.map((groupName) => (
                 <button
                   key={groupName}
                   type="button"
-                  className={`round-group-tab public-round-group-tab ${safeActiveGroup === groupName ? 'active' : ''}`}
+                  className={`comp-view-tab ${safeActiveGroup === groupName ? 'active' : ''}`}
                   onClick={() => setActiveGroup(groupName)}
                 >
                   {groupName}조
@@ -197,10 +198,10 @@ export const CompetitionRoundPage = () => {
                 <button
                   key="role-tab-all"
                   type="button"
-                  className={`round-role-tab ${activeRole === 'all' ? 'active' : ''}`}
+                  className={`round-role-tab role-all ${activeRole === 'all' ? 'active' : ''}`}
                   onClick={() => setActiveRole('all')}
                 >
-                  <span className="player-role-badge role-all">전체</span> ({rowEntries.length})
+                  전체 ({allEntries.length})
                 </button>
                 {roleItems.map((roleItem) => {
                   const count = rowsByRole.find((item) => item.roleItem.role === roleItem.role)?.rows.length ?? 0;
@@ -208,10 +209,10 @@ export const CompetitionRoundPage = () => {
                     <button
                       key={`role-tab-${roleItem.role}`}
                       type="button"
-                      className={`round-role-tab ${activeRole === roleItem.role ? 'active' : ''}`}
+                      className={`round-role-tab ${roleItem.className} ${activeRole === roleItem.role ? 'active' : ''}`}
                       onClick={() => setActiveRole(roleItem.role)}
                     >
-                      <span className={`player-role-badge ${roleItem.className}`}>{roleItem.label}</span> ({count})
+                      {roleItem.label} ({count})
                     </button>
                   );
                 })}

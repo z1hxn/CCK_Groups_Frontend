@@ -23,6 +23,15 @@ type RoleItem = {
   label: string;
   className: string;
 };
+type ViewRole = PlayerRole | 'all';
+type RoleEntry = {
+  role: PlayerRole;
+  label: string;
+  className: string;
+  cckId: string;
+  idx: number;
+  group: string;
+};
 
 const roleItems: RoleItem[] = [
   { role: 'competition', label: '출전', className: 'role-player' },
@@ -51,9 +60,13 @@ export const AdminCompetitionRoundPage = () => {
   const [nameByCckId, setNameByCckId] = useState<Record<string, string>>({});
   const [registrations, setRegistrations] = useState<ConfirmedRegistration[]>([]);
   const [activeGroup, setActiveGroup] = useState('');
-  const [addingRole, setAddingRole] = useState<PlayerRole | null>(null);
-  const [selectedAddByKey, setSelectedAddByKey] = useState<Record<string, string>>({});
-  const [selectedEditGroupByKey, setSelectedEditGroupByKey] = useState<Record<string, string>>({});
+  const [activeRole, setActiveRole] = useState<ViewRole>('all');
+  const [query, setQuery] = useState('');
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addRole, setAddRole] = useState<PlayerRole>('competition');
+  const [addCckId, setAddCckId] = useState('');
+  const [detailEntry, setDetailEntry] = useState<RoleEntry | null>(null);
+  const [detailTargetGroup, setDetailTargetGroup] = useState('');
   const [mutatingKey, setMutatingKey] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string }>({
     open: false,
@@ -133,6 +146,12 @@ export const AdminCompetitionRoundPage = () => {
     }
   }, [activeGroup, groupNames]);
 
+  useEffect(() => {
+    if (detailEntry && groupNames.length > 0 && !groupNames.includes(detailTargetGroup)) {
+      setDetailTargetGroup(detailEntry.group);
+    }
+  }, [detailEntry, detailTargetGroup, groupNames]);
+
   if (!isAdminByToken()) return <div className="empty-state">403 Forbidden</div>;
   if (loading) return <div className="empty-state">라운드 편집 정보 로딩 중...</div>;
   if (!competition || !assignments) return <div className="empty-state">라운드 정보를 불러올 수 없습니다.</div>;
@@ -195,8 +214,10 @@ export const AdminCompetitionRoundPage = () => {
       });
       await loadData();
       setToast({ open: true, message: '배정이 수정되었습니다.', variant: 'success' });
+      return true;
     } catch (error) {
       setToast({ open: true, message: `배정 수정 실패: ${String(error)}`, variant: 'error' });
+      return false;
     } finally {
       setMutatingKey(null);
     }
@@ -206,10 +227,92 @@ export const AdminCompetitionRoundPage = () => {
     ? `${assignments.round.cubeEventName} ${assignments.round.roundName}`
     : `Round ${targetRoundIdx}`;
 
-  const activeGroupRoleRows = roleItems.map((roleItem) => ({
+  const rowsByRole = roleItems.map((roleItem) => ({
     roleItem,
     rows: assignments[roleItem.role].filter((item) => normalizeGroupName(item.group) === activeGroup),
   }));
+  const allEntries: RoleEntry[] = rowsByRole.flatMap(({ roleItem, rows }) =>
+    rows.map((item) => ({
+      role: roleItem.role,
+      label: roleItem.label,
+      className: roleItem.className,
+      cckId: item.cckId,
+      idx: item.idx,
+      group: item.group,
+    })),
+  );
+  const rowEntries: RoleEntry[] =
+    activeRole === 'all'
+      ? allEntries
+      : rowsByRole
+          .filter(({ roleItem }) => roleItem.role === activeRole)
+          .flatMap(({ roleItem, rows }) =>
+            rows.map((item) => ({
+              role: roleItem.role,
+              label: roleItem.label,
+              className: roleItem.className,
+              cckId: item.cckId,
+              idx: item.idx,
+              group: item.group,
+            })),
+          );
+  const filteredRows = rowEntries.filter((entry) => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return true;
+    const name = nameByCckId[entry.cckId.toLowerCase()] ?? entry.cckId;
+    return name.toLowerCase().includes(keyword) || entry.cckId.toLowerCase().includes(keyword);
+  });
+
+  const openAddModal = () => {
+    const defaultRole = activeRole === 'all' ? 'competition' : activeRole;
+    setAddRole(defaultRole);
+    setAddCckId('');
+    setAddModalOpen(true);
+  };
+
+  const submitAdd = async () => {
+    const role = addRole;
+    const cckIdToAdd = addCckId.trim();
+    if (!cckIdToAdd) return;
+
+    const runAdd = async () => {
+      const currentGroups = getCurrentRoleGroups(role, cckIdToAdd);
+      const nextGroups = role === 'competition' ? [activeGroup] : toUniqueSortedGroups([...currentGroups, activeGroup]);
+      const ok = await updateRoleGroups(role, cckIdToAdd, nextGroups, `add-${activeGroup}-${role}`);
+      if (ok) setAddModalOpen(false);
+    };
+
+    const isParticipant = participantSet.has(cckIdToAdd.toLowerCase());
+    if (!isParticipant) {
+      askConfirm(
+        '미참가 종목 예외 배정',
+        role === 'competition'
+          ? '이 선수는 해당 종목 미참가입니다. 즉석 신청/예외 출전으로 배정할까요?'
+          : '이 선수는 해당 종목 미참가입니다. 스탭으로 예외 배정할까요?',
+        () => void runAdd(),
+      );
+      return;
+    }
+
+    const limitCheck = validateLimit(role, activeGroup, cckIdToAdd);
+    if (limitCheck.blocked) {
+      setToast({
+        open: true,
+        variant: 'error',
+        message: `${activeGroup}조 ${roleItems.find((item) => item.role === role)?.label ?? ''} 정원(${limitCheck.roleLimit})이 가득 찼습니다.`,
+      });
+      return;
+    }
+    if (limitCheck.warn) {
+      askConfirm(
+        '정원 초과 경고',
+        `${activeGroup}조 ${roleItems.find((item) => item.role === role)?.label ?? ''} 정원(${limitCheck.roleLimit})을 초과합니다. 계속 배정할까요?`,
+        () => void runAdd(),
+      );
+      return;
+    }
+    await runAdd();
+  };
 
   return (
     <div className="comp-page">
@@ -225,7 +328,7 @@ export const AdminCompetitionRoundPage = () => {
         }
         actions={[
           {
-            label: '대회관리',
+            label: '대회 관리',
             to: `/admin/competition/${competitionId}`,
             iconSrc: '/icon/button/back.svg',
           },
@@ -233,244 +336,88 @@ export const AdminCompetitionRoundPage = () => {
       />
 
       <div className="comp-content admin-content">
-        <section className="admin-panel">
-          <h3>조별 역할 배정 관리</h3>
-          {groupNames.length === 0 ? (
-            <div className="round-role-empty">표시할 조가 없습니다.</div>
-          ) : (
-            <div className="round-group-manage-wrap">
-              <div className="round-group-tabs">
-                {groupNames.map((groupName) => (
-                  <button
-                    key={groupName}
-                    type="button"
-                    className={`round-group-tab ${activeGroup === groupName ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveGroup(groupName);
-                      setAddingRole(null);
-                    }}
-                  >
-                    {groupName}조
-                  </button>
-                ))}
+        {groupNames.length === 0 ? (
+          <div className="round-role-empty">표시할 조가 없습니다.</div>
+        ) : (
+          <div className="round-group-manage-wrap">
+            <div className="comp-view-tabs">
+              {groupNames.map((groupName) => (
+                <button
+                  key={groupName}
+                  type="button"
+                  className={`comp-view-tab ${activeGroup === groupName ? 'active' : ''}`}
+                  onClick={() => setActiveGroup(groupName)}
+                >
+                  {groupName}조
+                </button>
+              ))}
+            </div>
+
+            <section className="round-group-card">
+              <header className="round-group-header">
+                <h3>{activeGroup}조</h3>
+              </header>
+              <div className="round-role-tab-list">
+                <button
+                  key="admin-role-tab-all"
+                  type="button"
+                  className={`round-role-tab role-all ${activeRole === 'all' ? 'active' : ''}`}
+                  onClick={() => setActiveRole('all')}
+                >
+                  전체 ({allEntries.length})
+                </button>
+                {roleItems.map((roleItem) => {
+                  const count = rowsByRole.find((item) => item.roleItem.role === roleItem.role)?.rows.length ?? 0;
+                  const limit = getRoleLimit(roleItem.role, activeGroup);
+                  return (
+                    <button
+                      key={`admin-role-tab-${roleItem.role}`}
+                      type="button"
+                      className={`round-role-tab ${roleItem.className} ${activeRole === roleItem.role ? 'active' : ''}`}
+                      onClick={() => setActiveRole(roleItem.role)}
+                    >
+                      {roleItem.label} ({limit > 0 ? `${count}/${limit}` : `${count}`})
+                    </button>
+                  );
+                })}
               </div>
 
-              <section className="round-group-card">
-                <header className="round-group-header">
-                  <h3>{activeGroup}조</h3>
-                </header>
-                <div className="round-role-grid">
-                  {activeGroupRoleRows.map(({ roleItem, rows }) => {
-                    const limit = getRoleLimit(roleItem.role, activeGroup);
-                    return (
-                      <div className="round-role-panel" key={`${activeGroup}-${roleItem.role}`}>
-                        <div className="round-role-panel-head">
-                          <span className={`player-role-badge ${roleItem.className}`}>{roleItem.label}</span>
-                          <div className="round-role-panel-head-right">
-                            <span>{limit > 0 ? `${rows.length}/${limit}명` : `${rows.length}명`}</span>
-                            <button
-                              type="button"
-                              className="round-role-plus-btn"
-                              onClick={() => setAddingRole((prev) => (prev === roleItem.role ? null : roleItem.role))}
-                            >
-                              + 추가
-                            </button>
-                          </div>
-                        </div>
-                        <div className="round-role-panel-body">
-                          {rows.length === 0 ? (
-                            <span className="round-role-empty">배정 없음</span>
-                          ) : (
-                            rows.map((assignment) => (
-                              <div key={`${roleItem.role}-${assignment.idx}`} className="round-role-member-edit-row">
-                                <span className="round-role-member">
-                                  {nameByCckId[assignment.cckId.toLowerCase()] ?? assignment.cckId}
-                                </span>
-                                <select
-                                  value={selectedEditGroupByKey[`${roleItem.role}-${assignment.idx}`] ?? activeGroup}
-                                  onChange={(event) =>
-                                    setSelectedEditGroupByKey((prev) => ({
-                                      ...prev,
-                                      [`${roleItem.role}-${assignment.idx}`]: event.target.value,
-                                    }))
-                                  }
-                                >
-                                  {groupNames.map((item) => (
-                                    <option key={`${roleItem.role}-${assignment.idx}-${item}`} value={item}>
-                                      {item}조
-                                    </option>
-                                  ))}
-                                </select>
-                                <button
-                                  type="button"
-                                  className="admin-save-all-btn round-role-add-btn"
-                                  disabled={mutatingKey === `move-${roleItem.role}-${assignment.cckId}-${activeGroup}`}
-                                  onClick={async () => {
-                                    const targetGroup = selectedEditGroupByKey[`${roleItem.role}-${assignment.idx}`] ?? activeGroup;
-                                    if (!targetGroup || targetGroup === activeGroup) return;
-                                    const runMove = async () => {
-                                      const currentGroups = getCurrentRoleGroups(roleItem.role, assignment.cckId);
-                                      const nextGroups =
-                                        roleItem.role === 'competition'
-                                          ? [targetGroup]
-                                          : toUniqueSortedGroups([
-                                              ...currentGroups.filter((item) => item !== activeGroup),
-                                              targetGroup,
-                                            ]);
-                                      await updateRoleGroups(
-                                        roleItem.role,
-                                        assignment.cckId,
-                                        nextGroups,
-                                        `move-${roleItem.role}-${assignment.cckId}-${activeGroup}`,
-                                      );
-                                    };
-
-                                    const limitCheck = validateLimit(roleItem.role, targetGroup, assignment.cckId);
-                                    if (limitCheck.blocked) {
-                                      setToast({
-                                        open: true,
-                                        variant: 'error',
-                                        message: `${targetGroup}조 ${roleItem.label} 정원(${limitCheck.roleLimit})이 가득 찼습니다.`,
-                                      });
-                                      return;
-                                    }
-                                    if (limitCheck.warn) {
-                                      askConfirm(
-                                        '정원 초과 경고',
-                                        `${targetGroup}조 ${roleItem.label} 정원(${limitCheck.roleLimit})을 초과합니다. 계속 이동할까요?`,
-                                        () => void runMove(),
-                                      );
-                                      return;
-                                    }
-                                    await runMove();
-                                  }}
-                                >
-                                  변경
-                                </button>
-                                <button
-                                  type="button"
-                                  className="admin-table-delete-btn"
-                                  disabled={mutatingKey === `remove-${roleItem.role}-${assignment.cckId}-${activeGroup}`}
-                                  onClick={async () => {
-                                    const currentGroups = getCurrentRoleGroups(roleItem.role, assignment.cckId);
-                                    const nextGroups = currentGroups.filter((group) => group !== activeGroup);
-                                    await updateRoleGroups(
-                                      roleItem.role,
-                                      assignment.cckId,
-                                      nextGroups,
-                                      `remove-${roleItem.role}-${assignment.cckId}-${activeGroup}`,
-                                    );
-                                  }}
-                                >
-                                  제거
-                                </button>
-                              </div>
-                            ))
-                          )}
-
-                          {addingRole === roleItem.role ? (
-                            <div className="round-role-edit-controls">
-                              <select
-                                value={selectedAddByKey[`${activeGroup}-${roleItem.role}`] ?? ''}
-                                onChange={(event) =>
-                                  setSelectedAddByKey((prev) => ({
-                                    ...prev,
-                                    [`${activeGroup}-${roleItem.role}`]: event.target.value,
-                                  }))
-                                }
-                              >
-                                <option value="">선수 선택</option>
-                                {registrationOptions.map((option) => (
-                                  <option key={`${activeGroup}-${roleItem.role}-${option.cckId}`} value={option.cckId}>
-                                    {option.label}
-                                    {option.isParticipant ? '' : ' · 미참가'}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                className="admin-save-all-btn round-role-add-btn"
-                                disabled={
-                                  mutatingKey === `add-${activeGroup}-${roleItem.role}` ||
-                                  !(selectedAddByKey[`${activeGroup}-${roleItem.role}`] ?? '').trim()
-                                }
-                                onClick={async () => {
-                                  const cckIdToAdd = (selectedAddByKey[`${activeGroup}-${roleItem.role}`] ?? '').trim();
-                                  if (!cckIdToAdd) return;
-
-                                  const runAdd = async () => {
-                                    const currentGroups = getCurrentRoleGroups(roleItem.role, cckIdToAdd);
-                                    const nextGroups =
-                                      roleItem.role === 'competition'
-                                        ? [activeGroup]
-                                        : toUniqueSortedGroups([...currentGroups, activeGroup]);
-                                    await updateRoleGroups(
-                                      roleItem.role,
-                                      cckIdToAdd,
-                                      nextGroups,
-                                      `add-${activeGroup}-${roleItem.role}`,
-                                    );
-                                    setSelectedAddByKey((prev) => ({
-                                      ...prev,
-                                      [`${activeGroup}-${roleItem.role}`]: '',
-                                    }));
-                                    setAddingRole(null);
-                                  };
-
-                                  const isParticipant = participantSet.has(cckIdToAdd.toLowerCase());
-                                  if (roleItem.role === 'competition' && !isParticipant) {
-                                    setToast({
-                                      open: true,
-                                      variant: 'error',
-                                      message: '미참가 종목 선수는 출전으로 배정할 수 없습니다.',
-                                    });
-                                    return;
-                                  }
-                                  if (roleItem.role !== 'competition' && !isParticipant) {
-                                    askConfirm(
-                                      '미참가 종목 예외 배정',
-                                      '이 선수는 해당 종목 미참가입니다. 스탭으로 예외 배정할까요?',
-                                      () => void runAdd(),
-                                    );
-                                    return;
-                                  }
-
-                                  const limitCheck = validateLimit(roleItem.role, activeGroup, cckIdToAdd);
-                                  if (limitCheck.blocked) {
-                                    setToast({
-                                      open: true,
-                                      variant: 'error',
-                                      message: `${activeGroup}조 ${roleItem.label} 정원(${limitCheck.roleLimit})이 가득 찼습니다.`,
-                                    });
-                                    return;
-                                  }
-                                  if (limitCheck.warn) {
-                                    askConfirm(
-                                      '정원 초과 경고',
-                                      `${activeGroup}조 ${roleItem.label} 정원(${limitCheck.roleLimit})을 초과합니다. 계속 배정할까요?`,
-                                      () => void runAdd(),
-                                    );
-                                    return;
-                                  }
-                                  await runAdd();
-                                }}
-                              >
-                                추가
-                              </button>
-                              <button type="button" className="admin-top-btn" onClick={() => setAddingRole(null)}>
-                                취소
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="round-role-tools">
+                <div className="round-role-search">
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="이름 또는 CCK ID 검색"
+                  />
                 </div>
-              </section>
-            </div>
-          )}
-        </section>
+                <button type="button" className="round-role-plus-btn" onClick={openAddModal}>
+                  + 추가
+                </button>
+              </div>
+
+              <div className="round-role-list">
+                {filteredRows.length === 0 ? (
+                  <span className="round-role-empty">배정 없음</span>
+                ) : (
+                  filteredRows.map((entry) => (
+                    <button
+                      key={`admin-row-${entry.role}-${entry.idx}`}
+                      type="button"
+                      className="round-role-list-item admin-round-role-list-item"
+                      onClick={() => {
+                        setDetailEntry(entry);
+                        setDetailTargetGroup(normalizeGroupName(entry.group));
+                      }}
+                    >
+                      <span className={`player-role-badge ${entry.className}`}>{entry.label}</span>
+                      <span>{nameByCckId[entry.cckId.toLowerCase()] ?? entry.cckId}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        )}
       </div>
 
       <OverlayConfirm
@@ -490,6 +437,150 @@ export const AdminCompetitionRoundPage = () => {
           action?.();
         }}
       />
+      {addModalOpen ? (
+        <div className="overlay-confirm-backdrop" role="presentation" onClick={() => setAddModalOpen(false)}>
+          <div className="overlay-confirm-card admin-round-add-card" onClick={(event) => event.stopPropagation()}>
+            <h3>배정 추가</h3>
+            <div className="admin-round-detail-row">
+              <span>조</span>
+              <strong>{activeGroup}조</strong>
+            </div>
+            <div className="admin-round-detail-row">
+              <span>역할</span>
+              <select
+                value={addRole}
+                onChange={(event) => setAddRole(event.target.value as PlayerRole)}
+                disabled={activeRole !== 'all'}
+              >
+                {roleItems.map((item) => (
+                  <option key={`add-role-${item.role}`} value={item.role}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="admin-round-detail-row">
+              <span>선수</span>
+              <select value={addCckId} onChange={(event) => setAddCckId(event.target.value)}>
+                <option value="">선수 선택</option>
+                {registrationOptions.map((option) => (
+                  <option key={`add-option-${option.cckId}`} value={option.cckId}>
+                    {option.label}
+                    {option.isParticipant ? '' : ' · 미참가'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="admin-round-detail-actions">
+              <button
+                type="button"
+                className="admin-save-all-btn"
+                disabled={mutatingKey === `add-${activeGroup}-${addRole}` || !addCckId.trim()}
+                onClick={() => void submitAdd()}
+              >
+                추가
+              </button>
+              <button type="button" className="admin-top-btn" onClick={() => setAddModalOpen(false)}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {detailEntry ? (
+        <div className="overlay-confirm-backdrop" role="presentation" onClick={() => setDetailEntry(null)}>
+          <div className="overlay-confirm-card admin-round-detail-card" onClick={(event) => event.stopPropagation()}>
+            <h3>배정 상세</h3>
+            <p>{nameByCckId[detailEntry.cckId.toLowerCase()] ?? detailEntry.cckId}</p>
+            <div className="admin-round-detail-row">
+              <span>역할</span>
+              <span className={`player-role-badge ${detailEntry.className}`}>{detailEntry.label}</span>
+            </div>
+            <div className="admin-round-detail-row">
+              <span>CCK ID</span>
+              <strong>{detailEntry.cckId}</strong>
+            </div>
+            <div className="admin-round-detail-row">
+              <span>조</span>
+              <select value={detailTargetGroup} onChange={(event) => setDetailTargetGroup(event.target.value)}>
+                {groupNames.map((groupName) => (
+                  <option key={`detail-group-${groupName}`} value={groupName}>
+                    {groupName}조
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="admin-round-detail-actions">
+              <button
+                type="button"
+                className="admin-save-all-btn"
+                disabled={mutatingKey === `move-${detailEntry.role}-${detailEntry.cckId}-${detailEntry.group}`}
+                onClick={async () => {
+                  if (!detailTargetGroup || detailTargetGroup === normalizeGroupName(detailEntry.group)) return;
+                  const runMove = async () => {
+                    const currentGroups = getCurrentRoleGroups(detailEntry.role, detailEntry.cckId);
+                    const nextGroups =
+                      detailEntry.role === 'competition'
+                        ? [detailTargetGroup]
+                        : toUniqueSortedGroups([
+                            ...currentGroups.filter((item) => item !== normalizeGroupName(detailEntry.group)),
+                            detailTargetGroup,
+                          ]);
+                    const ok = await updateRoleGroups(
+                      detailEntry.role,
+                      detailEntry.cckId,
+                      nextGroups,
+                      `move-${detailEntry.role}-${detailEntry.cckId}-${detailEntry.group}`,
+                    );
+                    if (ok) setDetailEntry(null);
+                  };
+                  const limitCheck = validateLimit(detailEntry.role, detailTargetGroup, detailEntry.cckId);
+                  if (limitCheck.blocked) {
+                    setToast({
+                      open: true,
+                      variant: 'error',
+                      message: `${detailTargetGroup}조 ${detailEntry.label} 정원(${limitCheck.roleLimit})이 가득 찼습니다.`,
+                    });
+                    return;
+                  }
+                  if (limitCheck.warn) {
+                    askConfirm(
+                      '정원 초과 경고',
+                      `${detailTargetGroup}조 ${detailEntry.label} 정원(${limitCheck.roleLimit})을 초과합니다. 계속 이동할까요?`,
+                      () => void runMove(),
+                    );
+                    return;
+                  }
+                  await runMove();
+                }}
+              >
+                변경
+              </button>
+              <button
+                type="button"
+                className="admin-table-delete-btn"
+                disabled={mutatingKey === `remove-${detailEntry.role}-${detailEntry.cckId}-${detailEntry.group}`}
+                onClick={async () => {
+                  const currentGroups = getCurrentRoleGroups(detailEntry.role, detailEntry.cckId);
+                  const nextGroups = currentGroups.filter((group) => group !== normalizeGroupName(detailEntry.group));
+                  const ok = await updateRoleGroups(
+                    detailEntry.role,
+                    detailEntry.cckId,
+                    nextGroups,
+                    `remove-${detailEntry.role}-${detailEntry.cckId}-${detailEntry.group}`,
+                  );
+                  if (ok) setDetailEntry(null);
+                }}
+              >
+                제거
+              </button>
+              <button type="button" className="admin-top-btn" onClick={() => setDetailEntry(null)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <OverlayToast
         open={toast.open}
         message={toast.message}

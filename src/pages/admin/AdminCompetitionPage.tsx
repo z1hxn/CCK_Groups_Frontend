@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getCompetitionConfirmedRegistrations, getCompetitionDetail } from '@/entities/competition/api';
+import {
+  getCompetitionConfirmedRegistrations,
+  getCompetitionDetail,
+  resetCompetitionAssignments,
+} from '@/entities/competition/api';
 import type { CompetitionDetail, ConfirmedRegistration } from '@/entities/competition/types';
 import { isAdminByToken } from '@/shared/auth/tokenStorage';
+import { OverlayToast } from '@/widgets/overlay';
 import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 
 export const AdminCompetitionPage = () => {
@@ -14,6 +19,15 @@ export const AdminCompetitionPage = () => {
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState<'player' | 'round'>('player');
   const [loading, setLoading] = useState(true);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<'warning' | 'typing'>('warning');
+  const [resetConfirmInput, setResetConfirmInput] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' | 'info' }>({
+    open: false,
+    message: '',
+    variant: 'info',
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -75,7 +89,7 @@ export const AdminCompetitionPage = () => {
         title={`${competition.name}`}
         subtitle={
           <>
-            <span>관리자 페이지</span>
+            <span>대회 관리자 페이지</span>
           </>
         }
         actions={[
@@ -100,7 +114,7 @@ export const AdminCompetitionPage = () => {
               className={`comp-view-tab ${viewMode === 'player' ? 'active' : ''}`}
               onClick={() => setViewMode('player')}
             >
-              사람별 관리
+              선수별 관리
             </button>
             <button
               type="button"
@@ -126,12 +140,23 @@ export const AdminCompetitionPage = () => {
             >
               자동 조편성
             </button>
+            <button
+              type="button"
+              className="admin-top-btn admin-top-btn-danger"
+              onClick={() => {
+                setResetModalOpen(true);
+                setResetStep('warning');
+                setResetConfirmInput('');
+              }}
+            >
+              모든 조편성 초기화
+            </button>
           </div>
         </div>
 
         {viewMode === 'player' ? (
           <section className="admin-panel">
-            <h3>사람별 조 편집</h3>
+            <h3>선수별 조 편집</h3>
             <div className="admin-player-picker">
               <input
                 value={query}
@@ -210,6 +235,82 @@ export const AdminCompetitionPage = () => {
           </section>
         )}
       </div>
+
+      {resetModalOpen ? (
+        <div className="overlay-confirm-backdrop" role="presentation" onClick={() => !resetting && setResetModalOpen(false)}>
+          <div className="overlay-confirm-card admin-reset-modal-card" onClick={(event) => event.stopPropagation()}>
+            {resetStep === 'warning' ? (
+              <>
+                <h3>강력한 초기화 경고</h3>
+                <p className="admin-reset-warning-text">
+                  이 작업은 <strong>{competition.name}</strong>의 모든 조편성 데이터를 삭제합니다.
+                </p>
+                <p className="admin-reset-warning-text">삭제 후 복구할 수 없습니다. 계속하려면 다음 단계로 진행하세요.</p>
+                <div className="admin-round-detail-actions">
+                  <button
+                    type="button"
+                    className="admin-save-all-btn"
+                    onClick={() => {
+                      setResetStep('typing');
+                      setResetConfirmInput('');
+                    }}
+                  >
+                    다음
+                  </button>
+                  <button type="button" className="admin-top-btn" onClick={() => setResetModalOpen(false)}>
+                    취소
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3>최종 확인</h3>
+                <p className="admin-reset-warning-text">
+                  아래 입력칸에 대회명을 정확히 입력하세요: <strong>{competition.name}</strong>
+                </p>
+                <input
+                  className="admin-reset-confirm-input"
+                  value={resetConfirmInput}
+                  onChange={(event) => setResetConfirmInput(event.target.value)}
+                  placeholder="대회명 입력"
+                />
+                <div className="admin-round-detail-actions">
+                  <button
+                    type="button"
+                    className="admin-save-all-btn"
+                    disabled={resetting || resetConfirmInput.trim() !== competition.name}
+                    onClick={async () => {
+                      if (resetConfirmInput.trim() !== competition.name) return;
+                      setResetting(true);
+                      try {
+                        await resetCompetitionAssignments(competitionId, resetConfirmInput.trim());
+                        setResetModalOpen(false);
+                        setToast({ open: true, variant: 'success', message: '모든 조편성이 초기화되었습니다.' });
+                      } catch (error) {
+                        setToast({ open: true, variant: 'error', message: `초기화 실패: ${String(error)}` });
+                      } finally {
+                        setResetting(false);
+                      }
+                    }}
+                  >
+                    {resetting ? '초기화 중...' : '모든 조편성 삭제'}
+                  </button>
+                  <button type="button" className="admin-top-btn" disabled={resetting} onClick={() => setResetStep('warning')}>
+                    이전
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      <OverlayToast
+        open={toast.open}
+        message={toast.message}
+        variant={toast.variant}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </div>
   );
 };

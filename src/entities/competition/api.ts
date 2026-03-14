@@ -21,6 +21,15 @@ type UpdatePlayerAssignmentRequest = {
   groups: string[];
 };
 type RoundConfigResponse = { data: RoundGroupConfig };
+type ResetAssignmentsResponse = {
+  data: {
+    compIdx: number;
+    competitionName: string;
+    roundCount: number;
+    deletedRows: number;
+    reset: boolean;
+  };
+};
 
 export const getCompetitions = async (status: CompetitionStatus): Promise<Competition[]> => {
   const response = await apiRequest<ListResponse>(`/competitions?status=${status}`);
@@ -114,4 +123,30 @@ export const updateAdminRoundGroupConfig = async (
     });
     return response.data;
   }
+};
+
+export const resetCompetitionAssignments = async (
+  competitionId: number,
+  confirmCompetitionName: string,
+): Promise<ResetAssignmentsResponse['data']> => {
+  const candidatePaths = [
+    `/admin/competition/${competitionId}/reset-assignments`,
+    `/admin/competitions/${competitionId}/reset-assignments`,
+    `/v1/admin/competition/${competitionId}/reset-assignments`,
+  ];
+
+  let lastError: unknown = null;
+  for (const path of candidatePaths) {
+    try {
+      const response = await apiRequest<ResetAssignmentsResponse>(path, {
+        method: 'POST',
+        body: JSON.stringify({ confirmCompetitionName }),
+      });
+      return response.data;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('reset-assignments failed');
 };

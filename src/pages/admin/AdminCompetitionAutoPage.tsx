@@ -21,7 +21,7 @@ export const AdminCompetitionAutoPage = () => {
         }
         actions={[
           {
-            label: '대회관리',
+            label: '대회 관리',
             to: `/admin/competition/${competitionId}`,
             iconSrc: '/icon/button/back.svg',
           },
