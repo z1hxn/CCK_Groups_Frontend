@@ -2335,6 +2335,10 @@
     display: block;
   }
 
+  .card-list-pill {
+    display: none;
+  }
+
   .player-timeline-head,
   .player-timeline-group {
     grid-template-columns: 1.7fr 1fr 1.1fr 0.8fr;
@@ -2405,5 +2409,110 @@
 
   .admin-auto-selection-grid {
     grid-template-columns: 1fr;
+  }
+
+  .comp-page-public {
+    gap: 20px;
+    padding: 6px 0 28px;
+  }
+
+  .comp-page-public .comp-header {
+    gap: 10px;
+    padding: 4px 0;
+  }
+
+  .comp-page-public .page-title {
+    font-size: 24px;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+  }
+
+  .comp-page-public .page-title-meta {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    font-size: 14px;
+  }
+
+  .comp-page-public .page-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .comp-page-public .page-action-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .comp-page-public .page-action-btn .page-action-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .comp-page-public .comp-view-tabs {
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .comp-page-public .comp-view-tab {
+    min-height: 42px;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .comp-page-public .registration-panel {
+    gap: 10px;
+  }
+
+  .comp-page-public .search-bar {
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 11px;
+  }
+
+  .comp-page-public .registration-summary {
+    font-size: 13px;
+  }
+
+  .comp-page-public .registration-list {
+    gap: 10px;
+  }
+
+  .comp-page-public .registration-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .comp-page-public .registration-line {
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 8px 10px;
+  }
+
+  .comp-page-public .registration-line strong {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .comp-page-public .registration-line span {
+    font-size: 14px;
+  }
+
+  .comp-page-public .round-list-link {
+    padding: 12px 14px;
+  }
+
+  .comp-page-public .round-list-line strong {
+    font-size: 16px;
+    line-height: 1.3;
   }
 }

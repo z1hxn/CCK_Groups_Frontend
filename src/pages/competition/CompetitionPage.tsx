@@ -116,7 +116,7 @@ export const CompetitionPage = () => {
   if (!competition) return <div className="empty-state">대회 정보를 불러올 수 없습니다.</div>;
 
   return (
-    <div className="comp-page">
+    <div className="comp-page comp-page-public">
       <PageHeader
         containerClassName="comp-header"
         title={competition.name}
