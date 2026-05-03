@@ -84,6 +84,10 @@ type BadgeExportRequest = {
     enablePath: string;
     disablePath: string;
   }>;
+  roundColumns: Array<{
+    roundIdx: number;
+    displayLabel: string;
+  }>;
 };
 
 export const getCompetitions = async (status: CompetitionStatus): Promise<Competition[]> => {

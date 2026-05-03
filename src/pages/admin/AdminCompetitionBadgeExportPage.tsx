@@ -17,6 +17,14 @@ type EventPathConfig = {
   disablePath: string;
 };
 
+type RoundColumnConfig = {
+  roundIdx: number;
+  eventCode: string;
+  eventName: string;
+  roundName: string;
+  displayLabel: string;
+};
+
 const normalizeEventName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '');
 
 const eventCodeAliases = new Map<string, string>([
@@ -57,12 +65,22 @@ const toEventCode = (value: string) => {
   return normalized.replace(/[^a-z0-9]/g, '');
 };
 
+const toRoundColumnSuffix = (roundName: string) => {
+  const raw = String(roundName || '').trim();
+  if (!raw) return '';
+  if (/결승|final/i.test(raw)) return 'final';
+  const digitMatch = raw.match(/(\d+)/);
+  if (digitMatch) return `${digitMatch[1]}r`;
+  return raw.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9가-힣]/g, '');
+};
+
 export const AdminCompetitionBadgeExportPage = () => {
   const { compIdx } = useParams();
   const competitionId = Number(compIdx);
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [basePath, setBasePath] = useState('');
   const [eventConfigs, setEventConfigs] = useState<EventPathConfig[]>([]);
+  const [roundColumns, setRoundColumns] = useState<RoundColumnConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' | 'info' }>({
@@ -111,6 +129,24 @@ export const AdminCompetitionBadgeExportPage = () => {
     return [...eventMap.entries()].map(([eventCode, eventName]) => ({ eventCode, eventName }));
   }, [competition?.rounds]);
 
+  const detectedRounds = useMemo(() => {
+    const rounds = competition?.rounds
+      ? [...competition.rounds].sort((a, b) => new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime())
+      : [];
+    return rounds
+      .map((round) => {
+        const eventCode = toEventCode(round.eventName);
+        if (!eventCode) return null;
+        return {
+          roundIdx: round.id,
+          eventCode,
+          eventName: round.eventName,
+          roundName: round.roundName,
+        };
+      })
+      .filter((item): item is { roundIdx: number; eventCode: string; eventName: string; roundName: string } => item !== null);
+  }, [competition?.rounds]);
+
   useEffect(() => {
     setEventConfigs((prev) => {
       const prevMap = new Map(prev.map((item) => [item.eventCode, item]));
@@ -126,6 +162,30 @@ export const AdminCompetitionBadgeExportPage = () => {
       });
     });
   }, [detectedEvents]);
+
+  useEffect(() => {
+    setRoundColumns((prev) => {
+      const prevMap = new Map(prev.map((item) => [item.roundIdx, item]));
+      const eventDisplayLabelByCode = new Map(eventConfigs.map((item) => [item.eventCode, item.displayLabel.trim() || item.eventCode]));
+      return detectedRounds.map((round) => {
+        const existing = prevMap.get(round.roundIdx);
+        if (existing) {
+          return {
+            ...existing,
+            eventCode: round.eventCode,
+            eventName: round.eventName,
+            roundName: round.roundName,
+          };
+        }
+        const eventLabel = eventDisplayLabelByCode.get(round.eventCode) || round.eventCode;
+        const suffix = toRoundColumnSuffix(round.roundName);
+        return {
+          ...round,
+          displayLabel: suffix ? `${eventLabel}-${suffix}` : eventLabel,
+        };
+      });
+    });
+  }, [detectedRounds, eventConfigs]);
 
   const downloadZip = async () => {
     if (!competition) return;
@@ -156,6 +216,15 @@ export const AdminCompetitionBadgeExportPage = () => {
       });
       return;
     }
+    const invalidRoundLabel = roundColumns.find((item) => !item.displayLabel.trim());
+    if (invalidRoundLabel) {
+      setToast({
+        open: true,
+        variant: 'error',
+        message: `${invalidRoundLabel.eventName} ${invalidRoundLabel.roundName} 라운드의 컬럼명을 입력해 주세요.`,
+      });
+      return;
+    }
 
     setExporting(true);
     try {
@@ -166,6 +235,10 @@ export const AdminCompetitionBadgeExportPage = () => {
           displayLabel: item.displayLabel.trim(),
           enablePath: item.enablePath.trim(),
           disablePath: item.disablePath.trim(),
+        })),
+        roundColumns: roundColumns.map((item) => ({
+          roundIdx: item.roundIdx,
+          displayLabel: item.displayLabel.trim(),
         })),
       });
 
@@ -294,6 +367,50 @@ export const AdminCompetitionBadgeExportPage = () => {
                   <tr>
                     <td colSpan={4} className="admin-player-table-empty">
                       감지된 종목이 없습니다.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>명찰 뒷면 라운드 컬럼명</h3>
+          <div className="admin-player-table-wrap">
+            <table className="admin-player-table">
+              <thead>
+                <tr>
+                  <th>종목</th>
+                  <th>라운드</th>
+                  <th>컬럼명</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roundColumns.map((item) => (
+                  <tr key={`badge-round-${item.roundIdx}`}>
+                    <td>{item.eventName || item.eventCode}</td>
+                    <td>{item.roundName || `Round ${item.roundIdx}`}</td>
+                    <td>
+                      <input
+                        className="admin-reset-confirm-input"
+                        value={item.displayLabel}
+                        onChange={(event) =>
+                          setRoundColumns((prev) =>
+                            prev.map((configItem) =>
+                              configItem.roundIdx === item.roundIdx
+                                ? { ...configItem, displayLabel: event.target.value }
+                                : configItem,
+                            ),
+                          )
+                        }
+                        placeholder="예: 333-1r, 333-final"
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {roundColumns.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="admin-player-table-empty">
+                      감지된 라운드가 없습니다.
                     </td>
                   </tr>
                 ) : null}
