@@ -12,6 +12,7 @@ import { PageHeader } from '@/widgets/pageHeader/PageHeader';
 type EventPathConfig = {
   eventCode: string;
   eventName: string;
+  displayLabel: string;
   enablePath: string;
   disablePath: string;
 };
@@ -118,6 +119,7 @@ export const AdminCompetitionBadgeExportPage = () => {
         return {
           eventCode: event.eventCode,
           eventName: event.eventName,
+          displayLabel: existing?.displayLabel || event.eventCode,
           enablePath: existing?.enablePath || '',
           disablePath: existing?.disablePath || '',
         };
@@ -145,6 +147,15 @@ export const AdminCompetitionBadgeExportPage = () => {
       });
       return;
     }
+    const invalidLabelItem = eventConfigs.find((item) => !item.displayLabel.trim());
+    if (invalidLabelItem) {
+      setToast({
+        open: true,
+        variant: 'error',
+        message: `${invalidLabelItem.eventName} 종목의 표시명을 입력해 주세요.`,
+      });
+      return;
+    }
 
     setExporting(true);
     try {
@@ -152,6 +163,7 @@ export const AdminCompetitionBadgeExportPage = () => {
         basePath: basePath.trim(),
         eventImages: eventConfigs.map((item) => ({
           eventCode: item.eventCode,
+          displayLabel: item.displayLabel.trim(),
           enablePath: item.enablePath.trim(),
           disablePath: item.disablePath.trim(),
         })),
@@ -217,6 +229,7 @@ export const AdminCompetitionBadgeExportPage = () => {
               <thead>
                 <tr>
                   <th>종목</th>
+                  <th>표시명</th>
                   <th>Enable 경로</th>
                   <th>Disable 경로</th>
                 </tr>
@@ -225,7 +238,23 @@ export const AdminCompetitionBadgeExportPage = () => {
                 {eventConfigs.map((item) => (
                   <tr key={`badge-event-${item.eventCode}`}>
                     <td>
-                      {item.eventCode} <span style={{ color: '#64748b' }}>({item.eventName})</span>
+                      {item.eventName || item.eventCode}
+                    </td>
+                    <td>
+                      <input
+                        className="admin-reset-confirm-input"
+                        value={item.displayLabel}
+                        onChange={(event) =>
+                          setEventConfigs((prev) =>
+                            prev.map((configItem) =>
+                              configItem.eventCode === item.eventCode
+                                ? { ...configItem, displayLabel: event.target.value }
+                                : configItem,
+                            ),
+                          )
+                        }
+                        placeholder="33, 3x3x3oh 등"
+                      />
                     </td>
                     <td>
                       <input
@@ -263,7 +292,7 @@ export const AdminCompetitionBadgeExportPage = () => {
                 ))}
                 {eventConfigs.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="admin-player-table-empty">
+                    <td colSpan={4} className="admin-player-table-empty">
                       감지된 종목이 없습니다.
                     </td>
                   </tr>
