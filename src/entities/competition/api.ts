@@ -95,8 +95,11 @@ export const getCompetitionRoundsByDay = async (
 
 export const getCompetitionConfirmedRegistrations = async (
   competitionId: number,
+  size = 5000,
 ): Promise<ConfirmedRegistration[]> => {
-  const response = await apiRequest<ConfirmedRegistrationResponse>(`/competitions/${competitionId}/registrations/confirmed`);
+  const response = await apiRequest<ConfirmedRegistrationResponse>(
+    `/competitions/${competitionId}/registrations/confirmed?size=${size}`,
+  );
   return response.data;
 };
 
