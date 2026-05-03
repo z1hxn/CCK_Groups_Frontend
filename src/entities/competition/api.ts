@@ -1,4 +1,6 @@
 import { apiRequest } from '@/shared/api/client';
+import { getAccessToken } from '@/shared/auth/tokenStorage';
+import { API_URL } from '@/shared/config';
 import { normalizeCckId } from '@/shared/lib/cckId';
 import type {
   Competition,
@@ -73,6 +75,15 @@ type AutoAssignResponse = {
     }>;
     autoAssigned: boolean;
   };
+};
+type BadgeExportRequest = {
+  basePath: string;
+  eventImages: Array<{
+    eventCode: string;
+    displayLabel: string;
+    enablePath: string;
+    disablePath: string;
+  }>;
 };
 
 export const getCompetitions = async (status: CompetitionStatus): Promise<Competition[]> => {
@@ -241,4 +252,39 @@ export const autoAssignCompetition = async (
   }
 
   throw lastError instanceof Error ? lastError : new Error('auto-assign failed');
+};
+
+export const exportCompetitionBadgeCsvZip = async (
+  competitionId: number,
+  payload: BadgeExportRequest,
+): Promise<{ blob: Blob; fileName: string }> => {
+  const base = (API_URL || '/api/v1').replace(/\/$/, '');
+  const url = `${base}/admin/competition/${competitionId}/badge-export`;
+  const token = getAccessToken();
+  const headers = new Headers({
+    Accept: 'application/zip',
+    'Content-Type': 'application/json',
+  });
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('content-disposition') || '';
+  const encodedFileName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] || '';
+  const decodedFileName = encodedFileName ? decodeURIComponent(encodedFileName) : '';
+  return {
+    blob,
+    fileName: decodedFileName || `competition-${competitionId}-badge-export.zip`,
+  };
 };

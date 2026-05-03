@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { startLogin } from '@/features/auth/api';
 import { AdminCompetitionAutoPage } from '@/pages/admin/AdminCompetitionAutoPage';
+import { AdminCompetitionBadgeExportPage } from '@/pages/admin/AdminCompetitionBadgeExportPage';
 import { AdminCompetitionGroupsPage } from '@/pages/admin/AdminCompetitionGroupsPage';
 import { AdminCompetitionPage } from '@/pages/admin/AdminCompetitionPage';
 import { AdminCompetitionPlayerPage } from '@/pages/admin/AdminCompetitionPlayerPage';
@@ -37,6 +38,7 @@ export const AppRoutes = ({ onLogoutClick }: AppRoutesProps) => (
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/competition/:compIdx" element={<AdminCompetitionPage />} />
           <Route path="/admin/competition/:compIdx/groups" element={<AdminCompetitionGroupsPage />} />
+          <Route path="/admin/competition/:compIdx/export" element={<AdminCompetitionBadgeExportPage />} />
           <Route path="/admin/competition/:compIdx/player/:cckId" element={<AdminCompetitionPlayerPage />} />
           <Route path="/admin/competition/:compIdx/round/:roundIdx" element={<AdminCompetitionRoundPage />} />
           <Route path="/admin/competition/:compIdx/groups/player/:cckId" element={<AdminCompetitionPlayerPage />} />
