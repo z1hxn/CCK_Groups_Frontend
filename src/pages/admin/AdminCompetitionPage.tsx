@@ -156,6 +156,13 @@ export const AdminCompetitionPage = () => {
             </button>
             <button
               type="button"
+              className="admin-top-btn"
+              onClick={() => navigate(`/admin/competition/${competitionId}/export`)}
+            >
+              조편성 추출
+            </button>
+            <button
+              type="button"
               className="admin-top-btn admin-top-btn-danger"
               onClick={() => {
                 setResetModalOpen(true);
